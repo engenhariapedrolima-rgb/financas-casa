@@ -233,9 +233,10 @@ nav button{font-size:10.5px}
       <input id="cfgUser" placeholder="Ex.: Pedro">
       <div class="acoes">
         <button class="btn" id="cfgSalvar">Salvar e conectar</button>
+        <button class="btn sec hide" id="cfgLink">Compartilhar link de configuração</button>
       </div>
       <p class="sub" id="cfgStatus" style="margin-top:10px"></p>
-      <p class="sub" style="margin-top:6px">Depois de conectado, a sincronização é automática: o que você lança sobe na hora e as mudanças dos outros aparelhos chegam em poucos segundos.</p>
+      <p class="sub" style="margin-top:6px">Recebeu um link de configuração? Cole-o no campo URL acima e toque em Salvar e conectar. Depois de conectado, a sincronização é automática: o que você lança sobe na hora e as mudanças dos outros aparelhos chegam em poucos segundos.</p>
     </div>
     <div class="card">
       <h2>Dados</h2>
@@ -689,6 +690,7 @@ function renderCfg(){
   const bs = bancos.filter(b => b.ativa !== false), selAtual = $('#relConta').value || extConta;
   $('#relConta').innerHTML = bs.map(b => `<option value="${esc(b.id)}" ${b.id === selAtual ? 'selected' : ''}>${esc(b.nome)}</option>`).join('');
   $('#relExtratoBox').classList.toggle('hide', !bs.length);
+  $('#cfgLink').classList.toggle('hide', !conectado());
   if (editandoCampo()) return;
   $('#cfgUrl').value = cfg.url; $('#cfgTok').value = cfg.token; $('#cfgUser').value = cfg.usuario;
   const quando = ultSync ? new Date(ultSync).toLocaleString('pt-BR', {timeZone: TZ}) : 'nunca';
@@ -1158,15 +1160,53 @@ document.addEventListener('click', async e => {
 });
 
 // conexão
-$('#cfgSalvar').onclick = async () => {
-  cfg = {url: $('#cfgUrl').value.trim(), token: $('#cfgTok').value.trim(), usuario: $('#cfgUser').value.trim()};
-  sv(LS.cfg, cfg);
+/* Link de configuração: https://.../#cfg=<código>. O código leva URL + token em base64.
+   O que vem depois do # nunca é enviado ao GitHub; o app lê, guarda no aparelho e apaga da barra de endereço. */
+function codigoCfg(c){
+  return btoa(unescape(encodeURIComponent(JSON.stringify({u: c.url, t: c.token})))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function lerCodigoCfg(txt){
+  const m = String(txt || '').match(/#cfg=([A-Za-z0-9_-]+)/); if (!m) return null;
+  try {
+    const b = m[1].replace(/-/g, '+').replace(/_/g, '/');
+    const o = JSON.parse(decodeURIComponent(escape(atob(b + '='.repeat((4 - b.length % 4) % 4)))));
+    if (o.u && o.t) return {url: o.u, token: o.t};
+  } catch {}
+  return null;
+}
+async function conectar(){
   if (!conectado()) { toast('Salvo (modo local)'); render(); return; }
-  $('#cfgStatus').textContent = 'Testando conexão…';
+  if (aba === 'cfg') $('#cfgStatus').textContent = 'Conectando…';
   // o que já existe neste aparelho sobe para a planilha na primeira conexão
   if (!ultSync) { ativos().forEach(l => { if (!fila.some(f => f.id === l.id)) fila.push(l); }); sv(LS.fila, fila); }
   ultServidor = ''; await sincronizar(true);
   toast(erroSync ? 'Não conectou: ' + erroSync : 'Conectado à planilha ✔ — sincronização automática ligada');
+  render();
+}
+async function aplicarLinkCfg(c){
+  cfg = {...cfg, url: c.url, token: c.token};
+  if (!cfg.usuario) { const n = prompt('Configuração recebida! Qual é o seu nome? (aparece em "quem lançou")', ''); if (n) cfg.usuario = n.trim(); }
+  sv(LS.cfg, cfg);
+  await conectar();
+}
+$('#cfgUrl').addEventListener('input', e => {
+  const c = lerCodigoCfg(e.target.value);
+  if (c) { e.target.value = c.url; $('#cfgTok').value = c.token; toast('Link de configuração reconhecido — toque em Salvar e conectar'); }
+});
+$('#cfgLink').onclick = async () => {
+  const link = location.origin + location.pathname + '#cfg=' + codigoCfg(cfg);
+  const texto = 'Link para configurar o app Finanças da Casa. Abra, informe seu nome e pronto. Não repasse: quem tiver este link acessa os dados.';
+  try {
+    if (navigator.share) { await navigator.share({title: 'Finanças da Casa', text: texto, url: link}); return; }
+  } catch (err) { if (err && err.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(link); toast('Link copiado — cole no WhatsApp'); }
+  catch { prompt('Copie o link:', link); }
+};
+$('#cfgSalvar').onclick = async () => {
+  const doLink = lerCodigoCfg($('#cfgUrl').value);
+  cfg = {url: doLink ? doLink.url : $('#cfgUrl').value.trim(), token: doLink ? doLink.token : $('#cfgTok').value.trim(), usuario: $('#cfgUser').value.trim()};
+  sv(LS.cfg, cfg);
+  await conectar();
 };
 $('#btnCsv').onclick = () => {
   const it = doMes(mes).sort((a, b) => a.data.localeCompare(b.data));
@@ -1207,7 +1247,9 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 
 render();
-sincronizar(true);
+const cfgDoLink = lerCodigoCfg(location.hash);
+if (cfgDoLink) { history.replaceState(null, '', location.pathname + location.search); aplicarLinkCfg(cfgDoLink); }
+else sincronizar(true);
 </script>
 </body>
 </html>
