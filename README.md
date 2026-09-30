@@ -1,0 +1,47 @@
+# Finanças da Casa — guia de implantação
+
+Arquivos: `index.html`, `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png` (vão para o GitHub) e `Code.gs` (vai para o Apps Script da planilha).
+
+O app já funciona **sem planilha** (modo local, dados só no aparelho). A planilha serve para sincronizar entre aparelhos e para mais de uma pessoa lançar.
+
+## 1. Planilha + Apps Script (backend)
+
+1. Crie uma planilha nova no Google Sheets (ex.: "Finanças da Casa").
+2. **Extensões > Apps Script**. Apague o conteúdo padrão e cole o `Code.gs`. Salve.
+3. No seletor de funções escolha **configurar** e clique em **Executar**. Autorize o acesso da sua conta.
+4. Abra **Registro de execução** e copie o **TOKEN** exibido. As abas `Lancamentos` e `Categorias` são criadas automaticamente.
+5. **Implantar > Nova implantação** > tipo **App da Web**
+   - Executar como: **Eu**
+   - Quem pode acessar: **Qualquer pessoa**
+6. Copie a **URL** que termina em `/exec`.
+
+> Se editar o `Code.gs` depois: **Implantar > Gerenciar implantações > ✏️ > Versão: Nova versão**. Assim a URL continua a mesma.
+>
+> O acesso "Qualquer pessoa" é necessário para o app chamar a API; quem protege os dados é o token. Para trocar o token, rode `gerarNovoToken()`.
+
+## 2. GitHub Pages (frontend)
+
+1. Crie um repositório (ex.: `financas-casa`) e envie os 5 arquivos do app para a raiz.
+2. **Settings > Pages > Source: Deploy from a branch > main / (root)**.
+3. O link fica `https://SEU-USUARIO.github.io/financas-casa/`.
+
+## 3. Primeiro acesso
+
+1. Abra o link, vá em **Ajustes**, cole a URL e o token e informe seu nome.
+2. **Salvar e testar**. Tudo o que você já tinha lançado no aparelho sobe para a planilha. Se a planilha estiver vazia, as categorias padrão também sobem.
+3. Instale o app: no Android/Chrome use **⋮ > Instalar app**; no iPhone/Safari use **Compartilhar > Adicionar à Tela de Início**.
+
+Para outra pessoa da casa usar: mesmo link, mesma URL e mesmo token, com o nome dela. Cada lançamento registra quem lançou.
+
+## Como funciona
+
+- **Lançamento**: pode ser saída ou entrada, paga ou pendente, com forma de pagamento. Também pode repetir:
+  - *Todo mês*: cria N lançamentos iguais (aluguel, escola, internet).
+  - *Parcelado*: divide o valor total em N parcelas, uma por mês, com descrição "(1/N)". Os centavos da divisão são ajustados na última parcela.
+  - Na edição de um item da série existe a opção "Excluir este e os próximos".
+- **Contas**: mostra o que está vencido, o que vence nos próximos 45 dias e o que há a receber. Um toque em "Paguei" dá baixa.
+- **Categorias**: nome, cor e orçamento mensal. O Resumo mostra previsto × realizado e muda de cor quando passa de 85% e de 100%.
+- **Sincronização**: o lançamento é gravado primeiro no aparelho e entra numa fila. A cada 30 s, ao voltar a ter internet ou ao reabrir o app, a fila é enviada com trava contra envio simultâneo. Cada lançamento tem um id gerado no aparelho, e a planilha grava por id (atualiza ou acrescenta), então um reenvio nunca duplica. Exclusão é lógica (coluna `excluido = sim`).
+- **Datas**: o "hoje" é sempre calculado no fuso de Brasília (`America/Sao_Paulo`), independente do aparelho.
+- **Atualização do app**: ao publicar mudanças, troque `VERSAO` no `sw.js` (ex.: `financas-casa-v2`). O app detecta a mudança e recarrega sozinho.
+- **Exportar**: Ajustes > Exportar mês em CSV. O arquivo usa `;` e vírgula decimal e abre direto no Excel em português.
