@@ -460,12 +460,23 @@ function statusSync(){
   else { dot.classList.add('ok'); tx.textContent = 'em dia'; }
   $('#avisoCfg').classList.toggle('hide', conectado());
 }
+function traduzErro(e){
+  e = String(e || 'Falha no servidor');
+  if (/desconhecida/i.test(e)) return 'O Apps Script está desatualizado: cole o Code.gs novo e publique em Implantar → Gerenciar implantações → ✏️ → Nova versão.';
+  if (/token/i.test(e)) return 'Token incorreto: confira o token em Relatórios → Conexão (ou use o link de configuração).';
+  if (/configurar/i.test(e)) return 'O backend ainda não foi configurado: rode a função configurar() no Apps Script.';
+  return e;
+}
 async function api(method, payload, desde){
   const opt = method === 'GET' ? {} : {method:'POST', body: JSON.stringify({token: cfg.token, ...payload})}; // text/plain: sem preflight CORS
   const url = method === 'GET' ? `${cfg.url}?token=${encodeURIComponent(cfg.token)}${desde ? '&desde=' + encodeURIComponent(desde) : ''}&t=${Date.now()}` : cfg.url;
-  const r = await fetch(url, {...opt, redirect:'follow', cache:'no-store'});
-  const j = await r.json();
-  if (!j.ok) throw new Error(j.erro || 'Falha no servidor');
+  let r;
+  try { r = await fetch(url, {...opt, redirect:'follow', cache:'no-store'}); }
+  catch { throw new Error(navigator.onLine ? 'Não foi possível falar com a planilha. Confira a URL e se a implantação está com acesso "Qualquer pessoa".' : 'Sem internet no momento.'); }
+  let j;
+  try { j = await r.json(); }
+  catch { throw new Error('A planilha não respondeu como esperado (HTTP ' + r.status + '). Confira a URL /exec e se a implantação está com acesso "Qualquer pessoa".'); }
+  if (!j.ok) throw new Error(traduzErro(j.erro));
   return j;
 }
 /* Sincronização automática:
@@ -844,7 +855,11 @@ $('#nav').onclick = e => {
 $('#mesAnt').onclick = () => { mes = somaMes(mes, -1); render(); };
 $('#mesProx').onclick = () => { mes = somaMes(mes, 1); render(); };
 $('#fab').onclick = () => abrirForm();
-$('#btnSync').onclick = () => { if (!conectado()) { toast('Configure a planilha em Relatórios → Conexão'); return; } sincronizar(true); };
+$('#btnSync').onclick = () => {
+  if (!conectado()) { toast('Configure a planilha em Relatórios → Conexão'); return; }
+  if (erroSync) alert('Erro de sincronização:\n\n' + erroSync + (fila.length ? `\n\n${fila.length} lançamento(s) aguardando envio — estão salvos neste aparelho.` : ''));
+  sincronizar(true);
+};
 
 document.addEventListener('click', e => {
   const pagar = e.target.closest('[data-pagar]');
