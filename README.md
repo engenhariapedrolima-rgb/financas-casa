@@ -39,7 +39,12 @@ Para outra pessoa da casa usar: mesmo link, mesma URL e mesmo token, com o nome 
   - *Todo mês*: cria N lançamentos iguais (aluguel, escola, internet).
   - *Parcelado*: divide o valor total em N parcelas, uma por mês, com descrição "(1/N)". Os centavos da divisão são ajustados na última parcela.
   - Na edição de um item da série existe a opção "Excluir este e os próximos".
-- **Contas**: mostra o que está vencido, o que vence nos próximos 45 dias e o que há a receber. Um toque em "Paguei" dá baixa.
+- **Bancos**: cadastre cada conta com o saldo que o banco mostra numa data. A partir dela o app soma os depósitos (entradas), desconta os pagamentos (saídas) e move os valores de transferências entre contas. O saldo mostrado é o realizado, e também aparece o saldo previsto até o fim do mês, contando o que está pendente.
+  - Em cada lançamento, escolha de qual conta saiu ou em qual entrou. Compra no cartão de crédito pode ficar como "Sem conta"; quando pagar a fatura, lance a saída na conta.
+  - "Conferir saldo": digite o saldo real do banco e o app lança um *ajuste* com a diferença. O ajuste não entra nos relatórios de entradas e saídas.
+  - Transferências também ficam fora dos totais de entradas e saídas, porque o dinheiro só mudou de conta.
+  - Excluir uma conta que tem movimentação apenas a arquiva, preservando o histórico.
+- **A pagar**: mostra o que está vencido, o que vence nos próximos 45 dias e o que há a receber. Um toque em "Paguei" dá baixa.
 - **Categorias**: nome, cor e orçamento mensal. O Resumo mostra previsto × realizado e muda de cor quando passa de 85% e de 100%.
 - **Sincronização**: o lançamento é gravado primeiro no aparelho e entra numa fila. A cada 30 s, ao voltar a ter internet ou ao reabrir o app, a fila é enviada com trava contra envio simultâneo. Cada lançamento tem um id gerado no aparelho, e a planilha grava por id (atualiza ou acrescenta), então um reenvio nunca duplica. Exclusão é lógica (coluna `excluido = sim`).
 - **Datas**: o "hoje" é sempre calculado no fuso de Brasília (`America/Sao_Paulo`), independente do aparelho.

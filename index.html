@@ -104,6 +104,20 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .sub{font-size:12px;color:var(--tx2)}
 #toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:#1f2937;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:20;max-width:90vw;text-align:center}
 #toast.on{opacity:1;transform:translateX(-50%)}
+.bancos{display:grid;gap:10px;margin-bottom:12px}
+.banco{background:var(--card);border:1px solid var(--bd);border-left:5px solid var(--c);border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh);cursor:pointer}
+.banco.sel{box-shadow:0 0 0 2px var(--c)}
+.banco .t{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.banco .t span{font-weight:600}
+.banco .t b{font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.banco small{color:var(--tx2);font-size:12px}
+.banco .ac{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.rb{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);font-size:14px;cursor:pointer}
+.rb:last-child{border-bottom:0}.rb b{font-variant-numeric:tabular-nums}
+.rb i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}
+.tr{color:var(--tx2)}
+nav button{font-size:10.5px}
+.seg button.on.t{background:#2563eb;color:#fff}
 .hide{display:none!important}
 </style>
 </head>
@@ -126,6 +140,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   <section class="view on" id="v-resumo">
     <div id="avisoCfg" class="aviso hide">Modo local: os dados ficam só neste aparelho. Configure a planilha em <b>Ajustes</b> para sincronizar e compartilhar.</div>
     <div id="avisoVenc" class="aviso warn hide"></div>
+    <div class="card hide" id="resBancos"><h2>Saldo nas contas agora</h2><div id="resBancosLista"></div></div>
     <div class="kpis">
       <div class="kpi big"><small>Saldo do mês</small><b id="kSaldo">—</b></div>
       <div class="kpi"><small>Entradas</small><b class="ent" id="kEnt">—</b></div>
@@ -144,6 +159,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       <button class="chip on" data-ft="todos">Todos</button>
       <button class="chip" data-ft="saida">Saídas</button>
       <button class="chip" data-ft="entrada">Entradas</button>
+      <button class="chip" data-ft="transf">Transferências</button>
       <select id="fCat"><option value="">Todas as categorias</option></select>
       <input id="fBusca" type="search" placeholder="Buscar descrição">
     </div>
@@ -156,6 +172,17 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     <div class="card"><h2>Vencidas</h2><div id="cVenc"></div></div>
     <div class="card"><h2>A pagar — próximos 45 dias</h2><div id="cProx"></div></div>
     <div class="card"><h2>A receber</h2><div id="cRec"></div></div>
+  </section>
+
+  <!-- BANCOS -->
+  <section class="view" id="v-bancos">
+    <div class="kpi big" style="margin-bottom:12px"><small>Total em contas agora</small><b id="bTotal">—</b><small id="bPrev"></small></div>
+    <div class="bancos" id="bLista"></div>
+    <div class="acoes" style="margin:0 0 12px">
+      <button class="btn sec" id="bNova">+ Cadastrar conta</button>
+      <button class="btn sec" id="bTransf">⇄ Transferir entre contas</button>
+    </div>
+    <div class="card" id="bExtCard"><h2>Extrato do mês</h2><select id="bExtSel" style="margin-bottom:8px"></select><div id="bExt"></div><p class="sub" id="bExtFim" style="margin-top:8px;text-align:right"></p></div>
   </section>
 
   <!-- CATEGORIAS -->
@@ -211,7 +238,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 <nav id="nav">
   <button class="on" data-v="resumo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Resumo</button>
   <button data-v="lanc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Lançamentos</button>
-  <button data-v="contas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Contas</button>
+  <button data-v="contas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>A pagar</button>
+  <button data-v="bancos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h18M12 3l9 5H3z"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg>Bancos</button>
   <button data-v="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>Categorias</button>
   <button data-v="cfg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 13.7H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 10h.1a2 2 0 0 1 0 4H21a1.7 1.7 0 0 0-1.6 1z"/></svg>Ajustes</button>
 </nav>
@@ -222,6 +250,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     <div class="seg" id="fTipo">
       <button type="button" data-t="saida" class="on s">Saída</button>
       <button type="button" data-t="entrada" class="e">Entrada</button>
+      <button type="button" data-t="transf" class="t">Transferência</button>
     </div>
     <label for="fValor">Valor (R$)</label>
     <input id="fValor" class="valor-in" inputmode="decimal" placeholder="0,00" autocomplete="off">
@@ -229,14 +258,18 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     <input id="fDesc" placeholder="Ex.: Conta de luz" list="sugDesc" autocomplete="off">
     <datalist id="sugDesc"></datalist>
     <div class="row">
-      <div><label for="fCatSel">Categoria</label><select id="fCatSel"></select></div>
+      <div id="fCatBox"><label for="fCatSel">Categoria</label><select id="fCatSel"></select></div>
       <div><label for="fData">Data / vencimento</label><input id="fData" type="date"></div>
     </div>
     <div class="row">
-      <div><label for="fForma">Forma</label>
+      <div id="fFormaBox"><label for="fForma">Forma</label>
         <select id="fForma"><option>Pix</option><option>Débito</option><option>Crédito</option><option>Boleto</option><option>Dinheiro</option><option>Transferência</option><option>Débito automático</option></select></div>
       <div><label>Situação</label>
         <div class="seg" id="fStatus"><button type="button" data-s="pago" class="on n">Pago</button><button type="button" data-s="pendente" class="n">Pendente</button></div></div>
+    </div>
+    <div class="row">
+      <div><label for="fConta" id="fContaLb">Conta bancária</label><select id="fConta"></select></div>
+      <div id="fDestBox" class="hide"><label for="fDest">Para a conta</label><select id="fDest"></select></div>
     </div>
     <div id="fRepBox">
       <label>Repetir</label>
@@ -259,6 +292,25 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       <button type="button" class="btn perigo" id="fDel">Excluir</button>
       <button type="button" class="btn perigo hide" id="fDelFut">Excluir este e os próximos</button>
     </div>
+  </form>
+</dialog>
+
+<dialog id="dlgConta">
+  <form class="dlg" id="formConta" novalidate>
+    <h3><span id="cTitulo">Nova conta</span><button type="button" class="x" id="cFechar" aria-label="Fechar">×</button></h3>
+    <label for="cNome">Nome da conta</label>
+    <input id="cNome" placeholder="Ex.: Nubank Pedro" autocomplete="off">
+    <label for="cBanco">Tipo</label>
+    <select id="cBanco"><option>Conta corrente</option><option>Conta digital</option><option>Poupança</option><option>Dinheiro / carteira</option><option>Investimento</option><option>Outra</option></select>
+    <div class="row">
+      <div><label for="cSaldo">Saldo inicial (R$)</label><input id="cSaldo" inputmode="decimal" placeholder="0,00" autocomplete="off"></div>
+      <div><label for="cData">Saldo na data</label><input id="cData" type="date"></div>
+    </div>
+    <p class="sub" style="margin-top:6px">Informe o saldo que o banco mostra nessa data. Daí em diante o app soma os depósitos e desconta os pagamentos feitos por esta conta.</p>
+    <label for="cCor">Cor</label>
+    <input id="cCor" type="color" style="height:40px;padding:2px">
+    <div class="acoes"><button type="submit" class="btn" style="flex:1">Salvar</button></div>
+    <div class="acoes hide" id="cDelBox"><button type="button" class="btn perigo" id="cDel">Excluir conta</button></div>
   </form>
 </dialog>
 
@@ -293,7 +345,7 @@ const dataCurta = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '';
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 2400); }
 
 /* ================== armazenamento local ================== */
-const LS = {cfg:'fc_cfg', lanc:'fc_lanc', cat:'fc_cat', fila:'fc_fila', catPend:'fc_catpend', ult:'fc_ultsync'};
+const LS = {cfg:'fc_cfg', lanc:'fc_lanc', cat:'fc_cat', fila:'fc_fila', catPend:'fc_catpend', ult:'fc_ultsync', bancos:'fc_bancos', bancosPend:'fc_bancospend'};
 const ld = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
 const sv = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
@@ -310,16 +362,46 @@ let lanc = ld(LS.lanc, {});         // id -> lançamento
 let cats = ld(LS.cat, CATS_PADRAO);
 let fila = ld(LS.fila, []);         // lançamentos ainda não enviados à planilha
 let catPend = ld(LS.catPend, false);
+let bancos = ld(LS.bancos, []);     // contas bancárias
+let bancosPend = ld(LS.bancosPend, false);
+let extConta = '';
 let ultSync = ld(LS.ult, '');
 let mes = hojeBR().slice(0, 7);
 let aba = 'resumo';
 let filtro = {tipo:'todos', cat:'', busca:''};
 let sincronizando = false, erroSync = '';
 
-const persistir = () => { sv(LS.lanc, lanc); sv(LS.fila, fila); sv(LS.cat, cats); sv(LS.catPend, catPend); };
+const persistir = () => { sv(LS.lanc, lanc); sv(LS.fila, fila); sv(LS.cat, cats); sv(LS.catPend, catPend); sv(LS.bancos, bancos); sv(LS.bancosPend, bancosPend); };
 const ativos = () => Object.values(lanc).filter(l => !l.excluido);
 const doMes = ym => ativos().filter(l => (l.data || '').startsWith(ym));
 const corCat = nome => (cats.find(c => c.nome === nome) || {}).cor || '#9ca3af';
+const bancosAtivos = () => bancos.filter(b => b.ativa !== false);
+const nomeConta = id => (bancos.find(b => b.id === id) || {}).nome || (id ? 'conta removida' : '');
+const fimMes = ym => somaDias(somaMes(ym, 1) + '-01', -1);
+
+/* ================== saldos das contas ================== */
+// efeito de um lançamento no saldo da conta "id"
+function efeitoConta(l, id, incluirPendente){
+  if (l.excluido) return 0;
+  if (l.tipo === 'ajuste') return l.conta === id ? l.valor : 0;
+  if (l.status !== 'pago' && !incluirPendente) return 0;
+  if (l.tipo === 'entrada') return l.conta === id ? l.valor : 0;
+  if (l.tipo === 'saida') return l.conta === id ? -l.valor : 0;
+  if (l.tipo === 'transf') return (l.contaDestino === id ? l.valor : 0) - (l.conta === id ? l.valor : 0);
+  return 0;
+}
+// saldo realizado (só o que foi pago/recebido); "ate" limita pela data
+function saldoConta(b, ate){
+  let s = b.saldoInicial || 0;
+  ativos().forEach(l => { if (l.data < (b.dataInicial || '') || (ate && l.data > ate)) return; s += efeitoConta(l, b.id); });
+  return cent(s);
+}
+// saldo previsto: realizado + o que está pendente até a data
+function previstoConta(b, ate){
+  let s = saldoConta(b);
+  ativos().forEach(l => { if (l.status !== 'pendente' || l.data < (b.dataInicial || '') || l.data > ate) return; s += efeitoConta(l, b.id, true); });
+  return cent(s);
+}
 
 /* ================== gravação (local primeiro, depois fila) ================== */
 function gravar(itens){
@@ -341,7 +423,7 @@ function statusSync(){
   if (!conectado()) { tx.textContent = 'local'; }
   else if (sincronizando) { dot.classList.add('run'); tx.textContent = 'sincronizando'; }
   else if (erroSync) { dot.classList.add('err'); tx.textContent = navigator.onLine ? 'erro' : 'offline'; }
-  else if (fila.length || catPend) { dot.classList.add('pend'); tx.textContent = `${fila.length + (catPend ? 1 : 0)} pendente(s)`; }
+  else if (fila.length || catPend || bancosPend) { dot.classList.add('pend'); tx.textContent = `${fila.length + (catPend ? 1 : 0) + (bancosPend ? 1 : 0)} pendente(s)`; }
   else { dot.classList.add('ok'); tx.textContent = 'em dia'; }
   $('#avisoCfg').classList.toggle('hide', conectado());
 }
@@ -368,6 +450,10 @@ async function sincronizar(){
       await api('POST', {action:'categorias', itens: cats});
       catPend = false; sv(LS.catPend, false);
     }
+    if (bancosPend) {
+      await api('POST', {action:'contas', itens: bancos});
+      bancosPend = false; sv(LS.bancosPend, false);
+    }
     const j = await api('GET');
     const pendentes = new Set(fila.map(f => f.id));
     const novo = {};
@@ -377,10 +463,13 @@ async function sincronizar(){
     lanc = novo;
     if (j.categorias.length) { cats = j.categorias.map(c => ({...c, orcamento: Number(c.orcamento) || 0})); }
     else if (cats.length) { catPend = true; }                       // planilha nova: envia as categorias padrão
+    if (j.contas && j.contas.length) {
+      bancos = j.contas.map(b => ({...b, saldoInicial: Number(b.saldoInicial) || 0, ativa: b.ativa === 'sim' || b.ativa === true}));
+    } else if (bancos.length) { bancosPend = true; }
     ultSync = agoraISO(); sv(LS.ult, ultSync);
     erroSync = '';
     persistir();
-    if (fila.length || catPend) setTimeout(sincronizar, 500);
+    if (fila.length || catPend || bancosPend) setTimeout(sincronizar, 500);
   } catch (e) {
     erroSync = e.message || String(e);
   } finally {
@@ -423,14 +512,27 @@ function desenharMeses(){
 }
 
 /* ================== telas ================== */
-function linhaItem(l, extra = ''){
+// efeito: valor com sinal a mostrar (usado no extrato da conta); acao: botão extra
+function linhaItem(l, extra = '', efeito, acao = ''){
   const pend = l.status === 'pendente';
+  const sinal = v => (v >= 0 ? '+ ' : '− ') + brl(Math.abs(v));
+  let cls, txt;
+  if (efeito !== undefined) { cls = efeito >= 0 ? 'ent' : 'sai'; txt = sinal(efeito); }
+  else if (l.tipo === 'entrada') { cls = 'ent'; txt = sinal(l.valor); }
+  else if (l.tipo === 'saida') { cls = 'sai'; txt = sinal(-l.valor); }
+  else if (l.tipo === 'ajuste') { cls = 'tr'; txt = sinal(l.valor); }
+  else { cls = 'tr'; txt = '⇄ ' + brl(l.valor); }
+  const especial = l.tipo === 'transf' || l.tipo === 'ajuste';
+  const titulo = l.descricao || (l.tipo === 'transf' ? 'Transferência' : l.tipo === 'ajuste' ? 'Ajuste de saldo' : l.categoria);
+  const det = l.tipo === 'transf' ? `${esc(nomeConta(l.conta))} → ${esc(nomeConta(l.contaDestino))}`
+    : l.tipo === 'ajuste' ? `Conferência · ${esc(nomeConta(l.conta))}`
+    : `${esc(l.categoria)} · ${esc(l.forma || '')}${l.conta ? ' · ' + esc(nomeConta(l.conta)) : ''}`;
   return `<div class="it" data-id="${esc(l.id)}">
-    <span class="bar" style="background:${esc(corCat(l.categoria))}"></span>
-    <div class="mid"><div>${esc(l.descricao || l.categoria)}</div>
-      <small>${esc(l.categoria)} · ${esc(l.forma || '')}${l.usuario ? ' · ' + esc(l.usuario) : ''}${extra}</small></div>
-    <div class="val"><div class="${l.tipo === 'entrada' ? 'ent' : 'sai'}">${l.tipo === 'entrada' ? '+' : '−'} ${brl(l.valor)}</div>
-      ${pend ? '<span class="tag pend">pendente</span>' : ''}</div></div>`;
+    <span class="bar" style="background:${especial ? '#64748b' : esc(corCat(l.categoria))}"></span>
+    <div class="mid"><div>${esc(titulo)}</div>
+      <small>${det}${l.usuario ? ' · ' + esc(l.usuario) : ''}${extra}</small></div>
+    <div class="val"><div class="${cls}">${txt}</div>
+      ${pend ? '<span class="tag pend">pendente</span>' : ''}${acao}</div></div>`;
 }
 
 function renderResumo(){
@@ -449,6 +551,15 @@ function renderResumo(){
   av.classList.toggle('hide', !venc.length);
   if (venc.length) av.innerHTML = `<b>${venc.length} conta(s) vencida(s)</b> somando ${brl(venc.reduce((s, l) => s + l.valor, 0))}. Veja em <b>Contas</b>.`;
 
+  const bs = bancosAtivos();
+  $('#resBancos').classList.toggle('hide', !bs.length);
+  if (bs.length) {
+    const tot = bs.reduce((s, b) => s + saldoConta(b), 0);
+    $('#resBancosLista').innerHTML = bs.map(b => { const v = saldoConta(b);
+      return `<div class="rb" data-irbanco="${esc(b.id)}"><span><i style="background:${esc(b.cor)}"></i>${esc(b.nome)}</span><b class="${v < 0 ? 'sai' : ''}">${brl(v)}</b></div>`; }).join('')
+      + `<div class="rb" style="font-weight:700"><span>Total</span><b class="${tot < 0 ? 'sai' : 'ent'}">${brl(tot)}</b></div>`;
+  }
+
   const comOrc = cats.filter(c => c.tipo === 'saida' && c.orcamento > 0);
   $('#orcLista').innerHTML = comOrc.length ? comOrc.map(c => {
     const gasto = it.filter(l => l.tipo === 'saida' && l.categoria === c.nome).reduce((s, l) => s + l.valor, 0);
@@ -466,7 +577,7 @@ function renderLanc(){
   sel.innerHTML = '<option value="">Todas as categorias</option>' + cats.map(c => `<option ${c.nome === atual ? 'selected' : ''}>${esc(c.nome)}</option>`).join('');
   const b = filtro.busca.toLowerCase();
   const it = doMes(mes).filter(l =>
-    (filtro.tipo === 'todos' || l.tipo === filtro.tipo) &&
+    (filtro.tipo === 'todos' || l.tipo === filtro.tipo || (filtro.tipo === 'transf' && l.tipo === 'ajuste')) &&
     (!filtro.cat || l.categoria === filtro.cat) &&
     (!b || (l.descricao || '').toLowerCase().includes(b))
   ).sort((x, y) => y.data.localeCompare(x.data) || (y.criadoEm || '').localeCompare(x.criadoEm || ''));
@@ -474,14 +585,14 @@ function renderLanc(){
   let html = '', dia = '';
   it.forEach(l => { if (l.data !== dia) { dia = l.data; html += `<div class="dia">${nomeDia(dia)}</div>`; } html += linhaItem(l); });
   $('#lancLista').innerHTML = html;
-  const tot = it.reduce((s, l) => s + (l.tipo === 'entrada' ? l.valor : -l.valor), 0);
+  const tot = it.reduce((s, l) => s + (l.tipo === 'entrada' ? l.valor : l.tipo === 'saida' ? -l.valor : 0), 0);
   $('#lancTot').textContent = `${it.length} lançamento(s) · resultado ${brl(tot)}`;
 }
 
 function listaContas(itens, vazio){
   if (!itens.length) return `<div class="vazio">${vazio}</div>`;
-  return itens.map(l => linhaItem(l, ` · vence ${dataCurta(l.data)}`).replace('</div></div>',
-    `<button class="btn mini" data-pagar="${esc(l.id)}">${l.tipo === 'entrada' ? 'Recebi' : 'Paguei'}</button></div></div>`)).join('');
+  return itens.map(l => linhaItem(l, ` · vence ${dataCurta(l.data)}`, undefined,
+    `<br><button class="btn mini" data-pagar="${esc(l.id)}">${l.tipo === 'entrada' ? 'Recebi' : 'Paguei'}</button>`)).join('');
 }
 function renderContas(){
   const hoje = hojeBR(), lim = somaDias(hoje, 45);
@@ -490,6 +601,36 @@ function renderContas(){
   $('#cVenc').innerHTML = listaContas(s.filter(l => l.data < hoje), 'Nenhuma conta vencida. 👍');
   $('#cProx').innerHTML = listaContas(s.filter(l => l.data >= hoje && l.data <= lim), 'Nada a pagar nos próximos 45 dias.');
   $('#cRec').innerHTML = listaContas(pend.filter(l => l.tipo === 'entrada' && l.data <= lim), 'Nada pendente para receber.');
+}
+
+function renderBancos(){
+  const bs = bancosAtivos(), hoje = hojeBR(), fim = fimMes(hoje.slice(0, 7));
+  const tot = bs.reduce((s, b) => s + saldoConta(b), 0), prev = bs.reduce((s, b) => s + previstoConta(b, fim), 0);
+  $('#bTotal').textContent = brl(tot); $('#bTotal').className = tot < 0 ? 'sai' : 'ent';
+  $('#bPrev').textContent = bs.length ? `Previsto para ${dataCurta(fim)} (com pendentes): ${brl(prev)}` : '';
+  $('#bTransf').classList.toggle('hide', bs.length < 2);
+  $('#bExtCard').classList.toggle('hide', !bs.length);
+  if (!bs.length) { $('#bLista').innerHTML = '<div class="card vazio">Nenhuma conta cadastrada. Cadastre suas contas com o saldo atual para acompanhar os saldos em tempo real.</div>'; return; }
+  if (!bs.some(b => b.id === extConta)) extConta = bs[0].id;
+  $('#bLista').innerHTML = bs.map(b => { const v = saldoConta(b), p = previstoConta(b, fim);
+    return `<div class="banco ${b.id === extConta ? 'sel' : ''}" style="--c:${esc(b.cor)}" data-banco="${esc(b.id)}">
+      <div class="t"><span>${esc(b.nome)}</span><b class="${v < 0 ? 'sai' : ''}">${brl(v)}</b></div>
+      <small>${esc(b.banco)}${p !== v ? ` · previsto ${dataCurta(fim)}: ${brl(p)}` : ''}</small>
+      <div class="ac">
+        <button class="btn mini" data-bac="dep" data-b="${esc(b.id)}">+ Depósito</button>
+        <button class="btn mini sec" data-bac="pag" data-b="${esc(b.id)}">− Pagamento</button>
+        <button class="btn mini sec" data-bac="conf" data-b="${esc(b.id)}">Conferir saldo</button>
+        <button class="btn mini sec" data-bac="edit" data-b="${esc(b.id)}">Editar</button>
+      </div></div>`; }).join('');
+  $('#bExtSel').innerHTML = bs.map(b => `<option value="${esc(b.id)}" ${b.id === extConta ? 'selected' : ''}>${esc(b.nome)}</option>`).join('');
+  const b = bs.find(x => x.id === extConta);
+  const it = doMes(mes).filter(l => l.conta === extConta || l.contaDestino === extConta)
+    .sort((x, y) => y.data.localeCompare(x.data) || (y.criadoEm || '').localeCompare(x.criadoEm || ''));
+  let html = '', dia = '';
+  it.forEach(l => { if (l.data !== dia) { dia = l.data; html += `<div class="dia">${nomeDia(dia)}</div>`; }
+    html += linhaItem(l, '', efeitoConta(l, extConta, true)); });
+  $('#bExt').innerHTML = html || '<div class="vazio">Sem movimentação nesta conta neste mês.</div>';
+  $('#bExtFim').textContent = `Saldo realizado em ${dataCurta(fimMes(mes))}/${mes.slice(0, 4)}: ${brl(saldoConta(b, fimMes(mes)))}`;
 }
 
 function renderCats(){
@@ -512,16 +653,32 @@ function renderCfg(){
 
 function render(){
   $('#mesTx').textContent = nomeMes(mes);
-  $('#mesnav').classList.toggle('hide', !(aba === 'resumo' || aba === 'lanc'));
+  $('#mesnav').classList.toggle('hide', !(aba === 'resumo' || aba === 'lanc' || aba === 'bancos'));
   $$('.chartbox').forEach(c => c.classList.toggle('semchart', !window.Chart));
   statusSync();
-  ({resumo: renderResumo, lanc: renderLanc, contas: renderContas, cat: renderCats, cfg: renderCfg})[aba]();
+  ({resumo: renderResumo, lanc: renderLanc, contas: renderContas, bancos: renderBancos, cat: renderCats, cfg: renderCfg})[aba]();
 }
 
 /* ================== formulário ================== */
 const dlg = $('#dlg');
 let fEdit = null, fTipo = 'saida', fStatus = 'pago', fRep = 'nao';
 function segSel(box, attr, val){ $$(`${box} button`).forEach(b => b.classList.toggle('on', b.dataset[attr] === val)); }
+function preencherContas(sel, dest){
+  const bs = bancosAtivos(), transf = fTipo === 'transf';
+  const opts = (s, vazio) => (vazio ? `<option value="">${bs.length ? 'Sem conta (ex.: cartão de crédito)' : 'Nenhuma conta cadastrada'}</option>` : '')
+    + bancos.filter(b => b.ativa !== false || b.id === s).map(b => `<option value="${esc(b.id)}" ${b.id === s ? 'selected' : ''}>${esc(b.nome)}</option>`).join('');
+  $('#fConta').innerHTML = opts(sel, !transf);
+  $('#fDest').innerHTML = opts(dest, false);
+  if (transf && !dest) { const outra = bs.find(b => b.id !== $('#fConta').value); if (outra) $('#fDest').value = outra.id; }
+}
+function ajustarTipo(){
+  const transf = fTipo === 'transf';
+  $('#fCatBox').classList.toggle('hide', transf);
+  $('#fFormaBox').classList.toggle('hide', transf);
+  $('#fDestBox').classList.toggle('hide', !transf);
+  $('#fContaLb').textContent = transf ? 'Da conta' : fTipo === 'entrada' ? 'Entrou na conta' : 'Saiu da conta';
+}
+const ultimaConta = t => { const id = ld('fc_ultconta_' + t, ''); return bancosAtivos().some(b => b.id === id) ? id : ((bancosAtivos()[0] || {}).id || ''); };
 function preencherCats(sel){
   $('#fCatSel').innerHTML = cats.filter(c => c.tipo === fTipo).map(c => `<option ${c.nome === sel ? 'selected' : ''}>${esc(c.nome)}</option>`).join('');
 }
@@ -532,9 +689,13 @@ function infoVezes(){
     ? `${n}× de ${brl(cent(v / n))} — o valor informado é o total da compra.`
     : fRep === 'mensal' && n >= 2 ? `Cria ${n} lançamentos, um por mês, a partir da data escolhida.` : '';
 }
-function abrirForm(l){
+function abrirForm(l, preset = {}){
+  if (l && l.tipo === 'ajuste') {
+    if (confirm(`Ajuste de saldo de ${brl(l.valor)} em ${nomeConta(l.conta)}. Excluir este ajuste?`)) { gravar([{...l, excluido: true}]); toast('Ajuste excluído'); }
+    return;
+  }
   fEdit = l || null;
-  fTipo = l ? l.tipo : 'saida'; fStatus = l ? l.status : 'pago'; fRep = 'nao';
+  fTipo = preset.tipo || (l ? l.tipo : 'saida'); fStatus = preset.status || (l ? l.status : 'pago'); fRep = 'nao';
   $('#fTitulo').textContent = l ? 'Editar lançamento' : 'Novo lançamento';
   segSel('#fTipo', 't', fTipo); segSel('#fStatus', 's', fStatus); segSel('#fRep', 'r', 'nao');
   $('#fValor').value = l ? fmtValorInput(l.valor) : '';
@@ -542,6 +703,8 @@ function abrirForm(l){
   $('#fData').value = l ? l.data : (mes === hojeBR().slice(0, 7) ? hojeBR() : mes + '-01');
   $('#fForma').value = l ? (l.forma || 'Pix') : 'Pix';
   preencherCats(l ? l.categoria : '');
+  preencherContas(l ? (l.conta || '') : (preset.conta ?? ultimaConta(fTipo)), l ? l.contaDestino : '');
+  ajustarTipo();
   $('#fRepBox').classList.toggle('hide', !!l);
   $('#fVezesBox').classList.add('hide');
   $('#fDelBox').classList.toggle('hide', !l);
@@ -553,7 +716,7 @@ function abrirForm(l){
   dlg.showModal();
   if (!l) setTimeout(() => $('#fValor').focus(), 50);
 }
-$('#fTipo').onclick = e => { const b = e.target.closest('button'); if (!b) return; fTipo = b.dataset.t; segSel('#fTipo', 't', fTipo); preencherCats(''); };
+$('#fTipo').onclick = e => { const b = e.target.closest('button'); if (!b) return; fTipo = b.dataset.t; segSel('#fTipo', 't', fTipo); preencherCats(''); preencherContas(fEdit ? fEdit.conta : ultimaConta(fTipo), ''); ajustarTipo(); };
 $('#fStatus').onclick = e => { const b = e.target.closest('button'); if (!b) return; fStatus = b.dataset.s; segSel('#fStatus', 's', fStatus); };
 $('#fRep').onclick = e => { const b = e.target.closest('button'); if (!b) return; fRep = b.dataset.r; segSel('#fRep', 'r', fRep); $('#fVezesBox').classList.toggle('hide', fRep === 'nao'); infoVezes(); };
 $('#fVezes').oninput = infoVezes; $('#fValor').addEventListener('input', infoVezes);
@@ -564,7 +727,7 @@ $('#fDesc').addEventListener('change', () => {
   if (fEdit) return;
   const d = $('#fDesc').value.trim(); if (!d) return;
   const ult = ativos().filter(x => x.descricao === d && x.tipo === fTipo).sort((a, b) => (b.criadoEm || '').localeCompare(a.criadoEm || ''))[0];
-  if (ult) { $('#fCatSel').value = ult.categoria; $('#fForma').value = ult.forma; }
+  if (ult) { $('#fCatSel').value = ult.categoria; $('#fForma').value = ult.forma; if (ult.conta && bancosAtivos().some(b => b.id === ult.conta)) $('#fConta').value = ult.conta; }
 });
 
 $('#form').onsubmit = e => {
@@ -572,7 +735,11 @@ $('#form').onsubmit = e => {
   const valor = parseValor($('#fValor').value), desc = $('#fDesc').value.trim(), data = $('#fData').value;
   if (!(valor > 0)) { toast('Informe um valor maior que zero'); $('#fValor').focus(); return; }
   if (!data) { toast('Informe a data'); return; }
-  const base = {descricao: desc, categoria: $('#fCatSel').value, tipo: fTipo, forma: $('#fForma').value, status: fStatus};
+  const transf = fTipo === 'transf', conta = $('#fConta').value, contaDestino = transf ? $('#fDest').value : '';
+  if (transf && (!conta || !contaDestino || conta === contaDestino)) { toast('Escolha duas contas diferentes'); return; }
+  const base = {descricao: desc || (transf ? 'Transferência' : ''), categoria: transf ? '' : $('#fCatSel').value, tipo: fTipo,
+    forma: transf ? '' : $('#fForma').value, status: fStatus, conta, contaDestino};
+  if (conta) sv('fc_ultconta_' + fTipo, conta);
   if (fEdit) {
     gravar([{...fEdit, ...base, valor, data}]);
   } else {
@@ -616,7 +783,17 @@ $('#btnSync').onclick = () => { if (!conectado()) { toast('Configure a planilha 
 
 document.addEventListener('click', e => {
   const pagar = e.target.closest('[data-pagar]');
-  if (pagar) { e.stopPropagation(); const l = lanc[pagar.dataset.pagar]; if (l) { gravar([{...l, status: 'pago'}]); toast(l.tipo === 'entrada' ? 'Marcado como recebido' : 'Marcado como pago'); } return; }
+  if (pagar) {
+    e.stopPropagation(); const l = lanc[pagar.dataset.pagar]; if (!l) return;
+    if (!l.conta && bancosAtivos().length) { abrirForm(l, {status: 'pago'}); toast(l.tipo === 'entrada' ? 'Escolha em qual conta entrou' : 'Escolha de qual conta saiu'); return; }
+    gravar([{...l, status: 'pago'}]); toast(l.tipo === 'entrada' ? 'Marcado como recebido' : 'Marcado como pago'); return;
+  }
+  const irb = e.target.closest('[data-irbanco]');
+  if (irb) { extConta = irb.dataset.irbanco; $('#nav [data-v=bancos]').click(); return; }
+  const bac = e.target.closest('[data-bac]');
+  if (bac) { e.stopPropagation(); acaoBanco(bac.dataset.bac, bac.dataset.b); return; }
+  const bc = e.target.closest('.banco[data-banco]');
+  if (bc) { extConta = bc.dataset.banco; renderBancos(); return; }
   const it = e.target.closest('.it[data-id]');
   if (it && lanc[it.dataset.id]) abrirForm(lanc[it.dataset.id]);
 });
@@ -657,6 +834,67 @@ $('#ncAdd').onclick = () => {
   $('#ncNome').value = ''; salvarCats(); renderCats(); toast('Categoria adicionada');
 };
 
+// contas bancárias
+let cEdit = null;
+const dlgC = $('#dlgConta');
+function abrirConta(b){
+  cEdit = b || null;
+  $('#cTitulo').textContent = b ? 'Editar conta' : 'Nova conta';
+  $('#cNome').value = b ? b.nome : '';
+  $('#cBanco').value = b ? b.banco : 'Conta corrente';
+  $('#cSaldo').value = b ? (b.saldoInicial ? b.saldoInicial.toFixed(2).replace('.', ',') : '') : '';
+  $('#cData').value = b ? b.dataInicial : hojeBR();
+  $('#cCor').value = b ? b.cor : PALETA[bancos.length % PALETA.length];
+  $('#cDelBox').classList.toggle('hide', !b);
+  dlgC.showModal();
+}
+function salvarBancos(){ bancosPend = true; persistir(); render(); sincronizar(); }
+$('#cFechar').onclick = () => dlgC.close();
+dlgC.addEventListener('click', e => { if (e.target === dlgC) dlgC.close(); });
+$('#formConta').onsubmit = e => {
+  e.preventDefault();
+  const nome = $('#cNome').value.trim();
+  if (!nome) { toast('Dê um nome para a conta'); return; }
+  if (bancos.some(b => b.nome === nome && b !== cEdit)) { toast('Já existe uma conta com esse nome'); return; }
+  const saldo = parseValor($('#cSaldo').value);
+  const dados = {nome, banco: $('#cBanco').value, saldoInicial: isNaN(saldo) ? 0 : saldo, dataInicial: $('#cData').value || hojeBR(), cor: $('#cCor').value, ativa: true};
+  if (cEdit) Object.assign(cEdit, dados); else { const nova = {id: uid(), ...dados}; bancos.push(nova); extConta = nova.id; }
+  dlgC.close(); salvarBancos(); toast('Conta salva');
+};
+$('#cDel').onclick = () => {
+  if (!cEdit) return;
+  const usos = ativos().filter(l => l.conta === cEdit.id || l.contaDestino === cEdit.id).length;
+  if (usos) {
+    if (!confirm(`"${cEdit.nome}" tem ${usos} movimentação(ões). Ela será arquivada: some das listas, mas o histórico continua. Arquivar?`)) return;
+    cEdit.ativa = false;
+  } else {
+    if (!confirm(`Excluir "${cEdit.nome}"?`)) return;
+    bancos = bancos.filter(b => b !== cEdit);
+  }
+  dlgC.close(); salvarBancos();
+};
+function acaoBanco(acao, id){
+  const b = bancos.find(x => x.id === id); if (!b) return;
+  if (acao === 'dep') abrirForm(null, {tipo: 'entrada', conta: id});
+  else if (acao === 'pag') abrirForm(null, {tipo: 'saida', conta: id});
+  else if (acao === 'edit') abrirConta(b);
+  else if (acao === 'conf') {
+    const atual = saldoConta(b);
+    const r = prompt(`Saldo que o banco mostra agora em "${b.nome}" (o app calcula ${brl(atual)}):`, atual.toFixed(2).replace('.', ','));
+    if (r === null) return;
+    const real = parseValor(r);
+    if (isNaN(real)) { toast('Valor inválido'); return; }
+    const dif = cent(real - atual);
+    if (Math.abs(dif) < 0.005) { toast('Saldo confere ✔'); return; }
+    gravar([{id: uid(), tipo: 'ajuste', valor: dif, conta: id, contaDestino: '', data: hojeBR(), status: 'pago',
+      descricao: 'Ajuste de saldo', categoria: '', forma: '', usuario: cfg.usuario || '', grupo: '', criadoEm: agoraISO(), excluido: false}]);
+    toast(`Ajuste de ${brl(dif)} lançado`);
+  }
+}
+$('#bNova').onclick = () => abrirConta();
+$('#bTransf').onclick = () => abrirForm(null, {tipo: 'transf', conta: extConta});
+$('#bExtSel').onchange = e => { extConta = e.target.value; renderBancos(); };
+
 // ajustes
 $('#cfgSalvar').onclick = async () => {
   cfg = {url: $('#cfgUrl').value.trim(), token: $('#cfgTok').value.trim(), usuario: $('#cfgUser').value.trim()};
@@ -672,9 +910,9 @@ $('#cfgSync').onclick = () => sincronizar();
 $('#btnCsv').onclick = () => {
   const it = doMes(mes).sort((a, b) => a.data.localeCompare(b.data));
   const q = s => `"${String(s ?? '').replace(/"/g, '""')}"`;
-  const linhas = [['Data','Tipo','Descrição','Categoria','Forma','Situação','Valor','Quem lançou'].join(';'),
+  const linhas = [['Data','Tipo','Descrição','Categoria','Forma','Situação','Valor','Conta','Conta destino','Quem lançou'].join(';'),
     ...it.map(l => [l.data.split('-').reverse().join('/'), l.tipo, q(l.descricao), q(l.categoria), l.forma, l.status,
-      (l.tipo === 'saida' ? -l.valor : l.valor).toFixed(2).replace('.', ','), q(l.usuario)].join(';'))];
+      (l.tipo === 'saida' ? -l.valor : l.valor).toFixed(2).replace('.', ','), q(nomeConta(l.conta)), q(nomeConta(l.contaDestino)), q(l.usuario)].join(';'))];
   const blob = new Blob(['﻿' + linhas.join('\r\n')], {type: 'text/csv;charset=utf-8'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `financas-${mes}.csv`; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
@@ -682,7 +920,7 @@ $('#btnCsv').onclick = () => {
 $('#btnLimpar').onclick = () => {
   if (fila.length && !confirm(`Há ${fila.length} lançamento(s) ainda não enviados à planilha e eles serão perdidos. Continuar?`)) return;
   if (!confirm('Apagar os dados guardados neste aparelho?')) return;
-  lanc = {}; fila = []; catPend = false; ultSync = ''; cats = CATS_PADRAO.map(c => ({...c}));
+  lanc = {}; fila = []; catPend = false; ultSync = ''; bancos = []; bancosPend = false; cats = CATS_PADRAO.map(c => ({...c}));
   sv(LS.ult, ''); persistir(); render(); if (conectado()) sincronizar();
 };
 
