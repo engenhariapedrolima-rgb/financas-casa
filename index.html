@@ -140,6 +140,13 @@ nav button{font-size:10.5px}
 .palavra .pinfo{font-size:10.5px;opacity:.7;margin-top:10px}
 .palavra.carregando blockquote{opacity:.6}
 @media (prefers-color-scheme:dark){.palavra{background:linear-gradient(140deg,#0e4f4a 0%,#0b3b37 60%,#0a2a28 100%);box-shadow:none;border:1px solid #1f4a45}}
+.kpi .kl{margin-top:8px;display:grid;gap:3px}
+.kpi .kl div{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--tx2)}
+.kpi .kl i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.kpi .kl b{font-size:13px;display:inline;margin:0;color:var(--tx)}
+.kpi .det{display:block;margin-top:6px;font-size:12px;color:var(--tx2)}
+.kpi.apos{background:linear-gradient(135deg,var(--pri2),var(--card))}
+.kpi[data-irbanco]{cursor:pointer}
 .hide{display:none!important}
 </style>
 </head>
@@ -163,13 +170,16 @@ nav button{font-size:10.5px}
     <div id="avisoCfg" class="aviso hide">Modo local: os dados ficam só neste aparelho. Configure a planilha em <b>Relatórios → Conexão</b> para sincronizar e compartilhar.</div>
     <div id="avisoVenc" class="aviso warn hide"></div>
     <div class="palavra carregando" id="palavra" aria-live="polite"></div>
-    <div class="card hide" id="resBancos"><h2>Saldo nas contas agora</h2><div id="resBancosLista"></div></div>
+    <div class="kpis hide" id="kBancos">
+      <div class="kpi big" data-irbanco=""><small>Saldo nas contas agora</small><b id="kContas">—</b><div class="kl" id="kContasLista"></div></div>
+      <div class="kpi big apos"><small id="kAposTx">Saldo após pagar os pendentes</small><b id="kApos">—</b><span class="det" id="kAposDet"></span></div>
+    </div>
+    <div class="aviso hide" id="avisoSemConta">Cadastre suas contas em <b>Bancos</b> (com o saldo atual) para ver aqui o saldo disponível e o saldo após pagar os pendentes.</div>
     <div class="kpis">
-      <div class="kpi big"><small>Saldo do mês</small><b id="kSaldo">—</b></div>
-      <div class="kpi"><small>Entradas</small><b class="ent" id="kEnt">—</b></div>
-      <div class="kpi"><small>Saídas</small><b class="sai" id="kSai">—</b></div>
+      <div class="kpi"><small>Entradas do mês</small><b class="ent" id="kEnt">—</b></div>
+      <div class="kpi"><small>Saídas do mês</small><b class="sai" id="kSai">—</b></div>
       <div class="kpi"><small>Falta pagar no mês</small><b class="alerta" id="kPend">—</b></div>
-      <div class="kpi"><small>Já pago no mês</small><b id="kPago">—</b></div>
+      <div class="kpi"><small>Resultado do mês</small><b id="kSaldo">—</b></div>
     </div>
     <div class="card"><h2>Saídas por categoria</h2><div class="chartbox"><canvas id="chCat"></canvas></div><div id="chCatVazio" class="vazio hide">Nenhuma saída neste mês.</div></div>
     <div class="card"><h2>Orçamento do mês</h2><div id="orcLista"></div></div>
@@ -301,9 +311,10 @@ nav button{font-size:10.5px}
         <div class="seg" id="fStatus"><button type="button" data-s="pago" class="on n">Pago</button><button type="button" data-s="pendente" class="n">Pendente</button></div></div>
     </div>
     <div class="row">
-      <div><label for="fConta" id="fContaLb">Conta bancária</label><select id="fConta"></select></div>
+      <div id="fContaBox"><label for="fConta" id="fContaLb">Conta bancária</label><select id="fConta"></select></div>
       <div id="fDestBox" class="hide"><label for="fDest">Para a conta</label><select id="fDest"></select></div>
     </div>
+    <p class="sub hide" id="fContaHint" style="margin-top:8px">Pendente: a conta bancária será escolhida quando você marcar como pago (ou recebido).</p>
     <div id="fRepBox">
       <label>Repetir</label>
       <div class="seg" id="fRep">
@@ -413,6 +424,14 @@ const nomeConta = id => (bancos.find(b => b.id === id) || {}).nome || (id ? 'con
 const fimMes = ym => somaDias(somaMes(ym, 1) + '-01', -1);
 
 /* ================== saldos das contas ================== */
+// saldo nas contas hoje + entradas pendentes − saídas pendentes com vencimento até "ate" (vencidas incluídas)
+function aposPendentes(ate){
+  const bs = bancosAtivos(), atual = cent(bs.reduce((s, b) => s + saldoConta(b), 0));
+  const pend = ativos().filter(l => l.status === 'pendente' && (l.tipo === 'entrada' || l.tipo === 'saida') && l.data <= ate);
+  const entradas = cent(pend.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0));
+  const saidas = cent(pend.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0));
+  return {atual, entradas, saidas, qtd: pend.length, saldo: cent(atual + entradas - saidas)};
+}
 // efeito de um lançamento no saldo da conta "id"
 function efeitoConta(l, id, incluirPendente){
   if (l.excluido) return 0;
@@ -557,7 +576,7 @@ function desenharCat(itens){
   $('#chCat').parentElement.classList.toggle('hide', !ent.length);
   if (!window.Chart || !ent.length) return;
   const data = {labels: ent.map(e => e[0]), datasets: [{data: ent.map(e => cent(e[1])), backgroundColor: ent.map(e => corCat(e[0])), borderWidth: 0}]};
-  if (chCat) { chCat.data = data; chCat.options.plugins.legend.labels.color = corTexto(); chCat.update(); return; }
+  if (chCat) { chCat.data = data; chCat.options.plugins.legend.labels.color = corTexto(); chCat.update('none'); return; }
   chCat = new Chart($('#chCat'), {type:'doughnut', data, options:{
     maintainAspectRatio:false, cutout:'62%',
     plugins:{legend:{position:'right', labels:{color:corTexto(), boxWidth:12, font:{size:12}}},
@@ -569,10 +588,18 @@ function desenharMeses(){
   const s = meses.map(m => cent(doMes(m).filter(l => l.tipo === 'saida').reduce((s2, l) => s2 + l.valor, 0)));
   if (!window.Chart) return;
   const cs = getComputedStyle(document.documentElement);
-  const data = {labels: meses.map(nomeMesCurto), datasets:[
-    {label:'Entradas', data:e, backgroundColor: cs.getPropertyValue('--ent').trim(), borderRadius:4},
-    {label:'Saídas', data:s, backgroundColor: cs.getPropertyValue('--sai').trim(), borderRadius:4}]};
-  if (chMeses) { chMeses.data = data; chMeses.update(); return; }
+  const bs = bancosAtivos(), inicio = bs.reduce((m, b) => (!m || (b.dataInicial || '') < m) ? (b.dataInicial || '') : m, '');
+  const hojeM = hojeBR().slice(0, 7);
+  // saldo nas contas no fim de cada mês (só a partir do mês em que as contas foram cadastradas e até o mês atual)
+  const saldos = meses.map(m => (!bs.length || fimMes(m) < inicio || m > hojeM) ? null
+    : cent(bs.reduce((t, b) => t + (fimMes(m) < (b.dataInicial || '') ? 0 : saldoConta(b, m === hojeM ? undefined : fimMes(m))), 0)));
+  const ds = [
+    {label:'Entradas', data:e, backgroundColor: cs.getPropertyValue('--ent').trim(), borderRadius:4, order:2},
+    {label:'Saídas', data:s, backgroundColor: cs.getPropertyValue('--sai').trim(), borderRadius:4, order:2}];
+  if (bs.length) ds.push({type:'line', label:'Saldo nas contas', data:saldos, borderColor:'#2563eb', backgroundColor:'#2563eb',
+    borderWidth:2.5, pointRadius:4, tension:.3, spanGaps:true, order:1});
+  const data = {labels: meses.map(nomeMesCurto), datasets: ds};
+  if (chMeses) { chMeses.data = data; chMeses.update('none'); return; }
   chMeses = new Chart($('#chMeses'), {type:'bar', data, options:{
     maintainAspectRatio:false,
     scales:{x:{ticks:{color:corTexto()}, grid:{display:false}},
@@ -611,22 +638,29 @@ function renderResumo(){
   const pend = it.filter(l => l.tipo === 'saida' && l.status === 'pendente').reduce((s, l) => s + l.valor, 0);
   const saldo = ent - sai;
   $('#kEnt').textContent = brl(ent); $('#kSai').textContent = brl(sai);
-  $('#kPend').textContent = brl(pend); $('#kPago').textContent = brl(sai - pend);
+  $('#kPend').textContent = brl(pend);
   $('#kSaldo').textContent = brl(saldo); $('#kSaldo').className = saldo < 0 ? 'sai' : 'ent';
 
   const hoje = hojeBR();
   const venc = ativos().filter(l => l.tipo === 'saida' && l.status === 'pendente' && l.data < hoje);
   const av = $('#avisoVenc');
   av.classList.toggle('hide', !venc.length);
-  if (venc.length) av.innerHTML = `<b>${venc.length} conta(s) vencida(s)</b> somando ${brl(venc.reduce((s, l) => s + l.valor, 0))}. Veja em <b>Contas</b>.`;
+  if (venc.length) av.innerHTML = `<b>${venc.length} conta(s) vencida(s)</b> somando ${brl(venc.reduce((s, l) => s + l.valor, 0))}. Veja em <b>A pagar</b>.`;
 
   const bs = bancosAtivos();
-  $('#resBancos').classList.toggle('hide', !bs.length);
+  $('#kBancos').classList.toggle('hide', !bs.length);
+  $('#avisoSemConta').classList.toggle('hide', !!bs.length);
   if (bs.length) {
-    const tot = bs.reduce((s, b) => s + saldoConta(b), 0);
-    $('#resBancosLista').innerHTML = bs.map(b => { const v = saldoConta(b);
-      return `<div class="rb" data-irbanco="${esc(b.id)}"><span><i style="background:${esc(b.cor)}"></i>${esc(b.nome)}</span><b class="${v < 0 ? 'sai' : ''}">${brl(v)}</b></div>`; }).join('')
-      + `<div class="rb" style="font-weight:700"><span>Total</span><b class="${tot < 0 ? 'sai' : 'ent'}">${brl(tot)}</b></div>`;
+    const ate = fimMes(mes > hoje.slice(0, 7) ? mes : hoje.slice(0, 7));
+    const a = aposPendentes(ate);
+    $('#kContas').textContent = brl(a.atual); $('#kContas').className = a.atual < 0 ? 'sai' : 'ent';
+    $('#kContasLista').innerHTML = bs.length > 1 ? bs.map(b => { const v = saldoConta(b);
+      return `<div><span><i style="background:${esc(b.cor)}"></i>${esc(b.nome)}</span><b class="${v < 0 ? 'sai' : ''}">${brl(v)}</b></div>`; }).join('') : '';
+    $('#kAposTx').textContent = `Saldo após pagar os pendentes (até ${dataCurta(ate)})`;
+    $('#kApos').textContent = brl(a.saldo); $('#kApos').className = a.saldo < 0 ? 'sai' : 'ent';
+    $('#kAposDet').textContent = a.qtd
+      ? `${a.qtd} pendente(s): ` + [a.saidas ? `− ${brl(a.saidas)} a pagar` : '', a.entradas ? `+ ${brl(a.entradas)} a receber` : ''].filter(Boolean).join(' · ')
+      : 'Nenhum lançamento pendente até essa data.';
   }
 
   const comOrc = cats.filter(c => c.tipo === 'saida' && c.orcamento > 0);
@@ -676,7 +710,7 @@ function renderBancos(){
   const bs = bancosAtivos(), hoje = hojeBR(), fim = fimMes(hoje.slice(0, 7));
   const tot = bs.reduce((s, b) => s + saldoConta(b), 0), prev = bs.reduce((s, b) => s + previstoConta(b, fim), 0);
   $('#bTotal').textContent = brl(tot); $('#bTotal').className = tot < 0 ? 'sai' : 'ent';
-  $('#bPrev').textContent = bs.length ? `Previsto para ${dataCurta(fim)} (com pendentes): ${brl(prev)}` : '';
+  $('#bPrev').textContent = bs.length ? `Após pagar os pendentes até ${dataCurta(fim)}: ${brl(aposPendentes(fim).saldo)}` : '';
   $('#bTransf').classList.toggle('hide', bs.length < 2);
   $('#bExtCard').classList.toggle('hide', !bs.length);
   if (!bs.length) { $('#bLista').innerHTML = '<div class="card vazio">Nenhuma conta cadastrada. Cadastre suas contas com o saldo atual para acompanhar os saldos em tempo real.</div>'; return; }
@@ -753,6 +787,9 @@ function ajustarTipo(){
   $('#fFormaBox').classList.toggle('hide', transf);
   $('#fDestBox').classList.toggle('hide', !transf);
   $('#fContaLb').textContent = transf ? 'Da conta' : fTipo === 'entrada' ? 'Entrou na conta' : 'Saiu da conta';
+  const semConta = !transf && fStatus === 'pendente';   // pendente ainda não saiu de nenhuma conta
+  $('#fContaBox').classList.toggle('hide', semConta);
+  $('#fContaHint').classList.toggle('hide', !semConta || !bancosAtivos().length);
 }
 const ultimaConta = t => { const id = ld('fc_ultconta_' + t, ''); return bancosAtivos().some(b => b.id === id) ? id : ((bancosAtivos()[0] || {}).id || ''); };
 function preencherCats(sel){
@@ -779,7 +816,7 @@ function abrirForm(l, preset = {}){
   $('#fData').value = l ? l.data : (mes === hojeBR().slice(0, 7) ? hojeBR() : mes + '-01');
   $('#fForma').value = l ? (l.forma || 'Pix') : 'Pix';
   preencherCats(l ? l.categoria : '');
-  preencherContas(l ? (l.conta || '') : (preset.conta ?? ultimaConta(fTipo)), l ? l.contaDestino : '');
+  preencherContas(l ? (l.conta || (fStatus === 'pago' ? ultimaConta(fTipo) : '')) : (preset.conta ?? ultimaConta(fTipo)), l ? l.contaDestino : '');
   ajustarTipo();
   $('#fRepBox').classList.toggle('hide', !!l);
   $('#fVezesBox').classList.add('hide');
@@ -793,7 +830,9 @@ function abrirForm(l, preset = {}){
   if (!l) setTimeout(() => $('#fValor').focus(), 50);
 }
 $('#fTipo').onclick = e => { const b = e.target.closest('button'); if (!b) return; fTipo = b.dataset.t; segSel('#fTipo', 't', fTipo); preencherCats(''); preencherContas(fEdit ? fEdit.conta : ultimaConta(fTipo), ''); ajustarTipo(); };
-$('#fStatus').onclick = e => { const b = e.target.closest('button'); if (!b) return; fStatus = b.dataset.s; segSel('#fStatus', 's', fStatus); };
+$('#fStatus').onclick = e => { const b = e.target.closest('button'); if (!b) return; fStatus = b.dataset.s; segSel('#fStatus', 's', fStatus);
+  if (fStatus === 'pago' && !$('#fConta').value) { const u = ultimaConta(fTipo); if (u) $('#fConta').value = u; }   // ao pagar, sugere a última conta usada
+  ajustarTipo(); };
 $('#fRep').onclick = e => { const b = e.target.closest('button'); if (!b) return; fRep = b.dataset.r; segSel('#fRep', 'r', fRep); $('#fVezesBox').classList.toggle('hide', fRep === 'nao'); infoVezes(); };
 $('#fVezes').oninput = infoVezes; $('#fValor').addEventListener('input', infoVezes);
 $('#fFechar').onclick = () => dlg.close();
@@ -811,7 +850,8 @@ $('#form').onsubmit = e => {
   const valor = parseValor($('#fValor').value), desc = $('#fDesc').value.trim(), data = $('#fData').value;
   if (!(valor > 0)) { toast('Informe um valor maior que zero'); $('#fValor').focus(); return; }
   if (!data) { toast('Informe a data'); return; }
-  const transf = fTipo === 'transf', conta = $('#fConta').value, contaDestino = transf ? $('#fDest').value : '';
+  const transf = fTipo === 'transf', contaDestino = transf ? $('#fDest').value : '';
+  const conta = (!transf && fStatus === 'pendente') ? '' : $('#fConta').value;   // pendente fica sem conta até ser pago
   if (transf && (!conta || !contaDestino || conta === contaDestino)) { toast('Escolha duas contas diferentes'); return; }
   const base = {descricao: desc || (transf ? 'Transferência' : ''), categoria: transf ? '' : $('#fCatSel').value, tipo: fTipo,
     forma: transf ? '' : $('#fForma').value, status: fStatus, conta, contaDestino};
@@ -826,7 +866,8 @@ $('#form').onsubmit = e => {
       let v = valor, d = desc;
       if (fRep === 'parcelado') { v = i === n - 1 ? cent(valor - parcela * (n - 1)) : parcela; d = `${desc || base.categoria} (${i + 1}/${n})`; }
       itens.push({...base, id: uid(), valor: v, descricao: d, data: somaMesData(data, i),
-        status: i === 0 ? fStatus : 'pendente', usuario: cfg.usuario || '', grupo, criadoEm: t, excluido: false});
+        status: i === 0 ? fStatus : 'pendente', conta: (i === 0 || transf) ? base.conta : '',
+        usuario: cfg.usuario || '', grupo, criadoEm: t, excluido: false});
     }
     gravar(itens);
     if (n > 1) toast(`${n} lançamentos criados`);
