@@ -215,6 +215,8 @@ nav button{font-size:10.5px}
       <button class="btn sec" id="bNova">+ Cadastrar conta</button>
       <button class="btn sec" id="bTransf">⇄ Transferir entre contas</button>
     </div>
+    <div class="card hide" id="bArqCard"><h2>Contas arquivadas</h2>
+      <p class="sub" style="margin-bottom:6px">Contas excluídas que tinham movimentações ficam aqui, com o histórico preservado.</p><div id="bArq"></div></div>
     <div class="card" id="bExtCard"><h2>Extrato do mês</h2><select id="bExtSel" style="margin-bottom:8px"></select><div id="bExt"></div><p class="sub" id="bExtFim" style="margin-top:8px;text-align:right"></p></div>
   </section>
 
@@ -707,6 +709,14 @@ function renderContas(){
 }
 
 function renderBancos(){
+  const arq = bancos.filter(b => b.ativa === false);
+  $('#bArqCard').classList.toggle('hide', !arq.length);
+  $('#bArq').innerHTML = arq.map(b => {
+    const usos = ativos().filter(l => l.conta === b.id || l.contaDestino === b.id).length;
+    return `<div class="it" style="cursor:default"><span class="bar" style="background:${esc(b.cor)}"></span>
+      <div class="mid"><div>${esc(b.nome)}</div><small>${esc(b.banco)} · ${usos} movimentação(ões)</small></div>
+      <div class="val" style="display:flex;gap:6px"><button class="btn mini" data-barq="reat" data-b="${esc(b.id)}">Reativar</button>
+      <button class="btn mini perigo" data-barq="del" data-b="${esc(b.id)}">Excluir de vez</button></div></div>`; }).join('');
   const bs = bancosAtivos(), hoje = hojeBR(), fim = fimMes(hoje.slice(0, 7));
   const tot = bs.reduce((s, b) => s + saldoConta(b), 0), prev = bs.reduce((s, b) => s + previstoConta(b, fim), 0);
   $('#bTotal').textContent = brl(tot); $('#bTotal').className = tot < 0 ? 'sai' : 'ent';
@@ -976,7 +986,12 @@ $('#formConta').onsubmit = e => {
   e.preventDefault();
   const nome = $('#cNome').value.trim();
   if (!nome) { toast('Dê um nome para a conta'); return; }
-  if (bancos.some(b => b.nome === nome && b !== cEdit)) { toast('Já existe uma conta com esse nome'); return; }
+  const dup = bancos.find(b => b.nome.trim().toLowerCase() === nome.toLowerCase() && b !== cEdit);
+  if (dup && dup.ativa === false) {
+    if (!confirm(`Já existe uma conta arquivada chamada "${dup.nome}". Reativá-la? O histórico dela volta a contar no saldo.\n\n(Se preferir começar do zero, cancele e use "Excluir de vez" em Bancos → Contas arquivadas.)`)) return;
+    dup.ativa = true; extConta = dup.id; dlgC.close(); salvarBancos(); toast('Conta reativada — confira o saldo inicial em Editar'); return;
+  }
+  if (dup) { toast('Já existe uma conta com esse nome'); return; }
   const saldo = parseValor($('#cSaldo').value);
   const dados = {nome, banco: $('#cBanco').value, saldoInicial: isNaN(saldo) ? 0 : saldo, dataInicial: $('#cData').value || hojeBR(), cor: $('#cCor').value, ativa: true};
   if (cEdit) Object.assign(cEdit, dados); else { const nova = {id: uid(), ...dados}; bancos.push(nova); extConta = nova.id; }
@@ -986,7 +1001,7 @@ $('#cDel').onclick = () => {
   if (!cEdit) return;
   const usos = ativos().filter(l => l.conta === cEdit.id || l.contaDestino === cEdit.id).length;
   if (usos) {
-    if (!confirm(`"${cEdit.nome}" tem ${usos} movimentação(ões). Ela será arquivada: some das listas, mas o histórico continua. Arquivar?`)) return;
+    if (!confirm(`"${cEdit.nome}" tem ${usos} movimentação(ões). Ela será arquivada: some das listas, mas o histórico continua.\n\nDepois você pode reativar ou excluir de vez em Bancos → Contas arquivadas. Arquivar?`)) return;
     cEdit.ativa = false;
   } else {
     if (!confirm(`Excluir "${cEdit.nome}"?`)) return;
@@ -994,6 +1009,19 @@ $('#cDel').onclick = () => {
   }
   dlgC.close(); salvarBancos();
 };
+function excluirContaDeVez(b){
+  const movs = ativos().filter(l => l.conta === b.id || l.contaDestino === b.id);
+  if (!confirm(`Excluir "${b.nome}" definitivamente?${movs.length ? `\n\nAs ${movs.length} movimentação(ões) dela continuam nos lançamentos, mas ficam sem conta bancária.` : ''}`)) return;
+  if (movs.length) gravar(movs.map(l => ({...l, conta: l.conta === b.id ? '' : l.conta, contaDestino: l.contaDestino === b.id ? '' : l.contaDestino})));
+  bancos = bancos.filter(x => x !== b);
+  salvarBancos(); toast('Conta excluída');
+}
+document.addEventListener('click', e => {
+  const x = e.target.closest('[data-barq]'); if (!x) return;
+  const b = bancos.find(c => c.id === x.dataset.b); if (!b) return;
+  if (x.dataset.barq === 'reat') { b.ativa = true; extConta = b.id; salvarBancos(); toast('Conta reativada'); }
+  else excluirContaDeVez(b);
+});
 function acaoBanco(acao, id){
   const b = bancos.find(x => x.id === id); if (!b) return;
   if (acao === 'dep') abrirForm(null, {tipo: 'entrada', conta: id});
