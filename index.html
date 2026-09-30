@@ -124,6 +124,22 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .rel .btn{white-space:nowrap}
 nav button{font-size:10.5px}
 .seg button.on.t{background:#2563eb;color:#fff}
+.palavra{position:relative;overflow:hidden;border-radius:18px;padding:18px 18px 14px;margin-bottom:12px;color:#fff;
+  background:linear-gradient(140deg,#0f766e 0%,#115e59 55%,#123f3c 100%);box-shadow:0 10px 26px rgba(15,118,110,.22)}
+.palavra::before{content:'';position:absolute;right:-50px;top:-60px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 70%);pointer-events:none}
+.palavra::after{content:'\201C';position:absolute;right:14px;bottom:-34px;font:700 150px/1 Georgia,serif;color:rgba(255,255,255,.07);pointer-events:none}
+.palavra .pt{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.palavra .pt b{display:block;font-size:14.5px;letter-spacing:.2px}
+.palavra .pt small{display:block;font-size:12px;opacity:.78;margin-top:1px}
+.palavra blockquote{position:relative;font-family:Georgia,'Iowan Old Style','Palatino Linotype','Times New Roman',serif;font-size:19px;line-height:1.5;margin:14px 0 12px;font-style:italic;letter-spacing:.1px}
+.palavra .pr{font-size:11.5px;letter-spacing:2.2px;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:9px}
+.palavra .pr::before{content:'';width:22px;height:1.5px;background:#fcd34d;border-radius:2px}
+.palavra .pf{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;position:relative;z-index:1}
+.palavra .ptema{font-size:11px;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:99px}
+.palavra .pbt{border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:99px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.palavra .pinfo{font-size:10.5px;opacity:.7;margin-top:10px}
+.palavra.carregando blockquote{opacity:.6}
+@media (prefers-color-scheme:dark){.palavra{background:linear-gradient(140deg,#0e4f4a 0%,#0b3b37 60%,#0a2a28 100%);box-shadow:none;border:1px solid #1f4a45}}
 .hide{display:none!important}
 </style>
 </head>
@@ -146,6 +162,7 @@ nav button{font-size:10.5px}
   <section class="view on" id="v-resumo">
     <div id="avisoCfg" class="aviso hide">Modo local: os dados ficam só neste aparelho. Configure a planilha em <b>Relatórios → Conexão</b> para sincronizar e compartilhar.</div>
     <div id="avisoVenc" class="aviso warn hide"></div>
+    <div class="palavra carregando" id="palavra" aria-live="polite"></div>
     <div class="card hide" id="resBancos"><h2>Saldo nas contas agora</h2><div id="resBancosLista"></div></div>
     <div class="kpis">
       <div class="kpi big"><small>Saldo do mês</small><b id="kSaldo">—</b></div>
@@ -1159,6 +1176,95 @@ document.addEventListener('click', async e => {
   finally { b.disabled = false; b.textContent = txt; }
 });
 
+/* ================== Palavra do Dia ==================
+   - A lista de referências (data MM-DD, referência, tema) fica em palavra.json — sem o texto.
+   - O texto vem da API (tradução configurável em palavra.json > api.traducao) e é conferido:
+     livro, capítulo e versículos retornados precisam bater exatamente com a referência pedida.
+   - Guarda no aparelho a mensagem do dia: só consulta a API uma vez por dia.
+   - Sem internet, mostra a última mensagem guardada; ao voltar a conexão, busca a do dia. */
+const PALAVRA_LS = 'fc_palavra', PALAVRA_TENT = 'fc_palavra_tent';
+let palavraLista = null, palavraBuscando = false;
+async function listaPalavra(){
+  if (palavraLista) return palavraLista;
+  const r = await fetch('palavra.json', {cache: 'no-cache'});
+  if (!r.ok) throw new Error('Lista de versículos indisponível');
+  palavraLista = await r.json();
+  return palavraLista;
+}
+function itemDoDia(lista, hoje){
+  const item = lista.versiculos.find(v => v.data === hoje.slice(5));
+  if (item) return item;
+  // lista editada sem esse dia: usa a posição do dia no ano
+  const n = Math.round((Date.parse(hoje + 'T12:00:00Z') - Date.parse(hoje.slice(0, 4) + '-01-01T12:00:00Z')) / 864e5);
+  return lista.versiculos[n % lista.versiculos.length];
+}
+async function buscarVersiculo(lista, item){
+  const api = lista.api, [a, b] = String(item.versiculos).split('-').map(Number).concat([]);
+  const fim = b || a;
+  const url = `${api.url.replace(/\/$/, '')}/data/${encodeURIComponent(api.traducao)}/${encodeURIComponent(item.livro)}/${item.capitulo}`;
+  const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const r = await fetch(url, {signal: ctrl.signal});
+    if (!r.ok) throw new Error('API respondeu ' + r.status);
+    const j = await r.json();
+    const vs = (j.verses || []).filter(v => v.book_id === item.livro && Number(v.chapter) === Number(item.capitulo) && v.verse >= a && v.verse <= fim)
+      .sort((x, y) => x.verse - y.verse);
+    // precisa vir exatamente cada versículo pedido, sem faltar nenhum
+    if (vs.length !== fim - a + 1 || vs.some((v, i) => v.verse !== a + i)) throw new Error('Referência não encontrada na API');
+    const texto = vs.map(v => String(v.text).replace(/\s+/g, ' ').trim()).join(' ');
+    if (!texto) throw new Error('Texto vazio');
+    const nomeLivro = (lista.livros || {})[item.livro] || item.referencia.replace(/\s+\d+:.*$/, '');
+    const referencia = `${nomeLivro} ${vs[0].chapter}:${vs[0].verse}${vs.length > 1 ? '-' + vs[vs.length - 1].verse : ''}`;
+    return {texto, referencia, traducao: (j.translation && j.translation.name) || api.nomeTraducao || api.traducao,
+      licenca: (j.translation && j.translation.license) || api.licenca || ''};
+  } finally { clearTimeout(t); }
+}
+function mostrarPalavra(p, estado){
+  const el = $('#palavra'); if (!el) return;
+  el.classList.toggle('carregando', estado === 'carregando');
+  const cab = `<div class="pt"><div><b>🙏 Palavra do Dia</b><small>Uma mensagem para sua família</small></div>
+    ${p ? '<button class="pbt" id="palavraShare">Compartilhar</button>' : ''}</div>`;
+  if (!p) {
+    el.innerHTML = cab + `<blockquote style="font-style:normal;font-size:15px">${estado === 'carregando' ? 'Carregando a mensagem de hoje…'
+      : 'Não foi possível carregar a mensagem de hoje. Vamos tentar de novo assim que houver conexão.'}</blockquote>`;
+    return;
+  }
+  const antiga = p.data !== hojeBR();
+  el.innerHTML = cab + `<blockquote>“${esc(p.texto)}”</blockquote>
+    <div class="pr">${esc(p.referencia)}</div>
+    <div class="pf"><span class="ptema">${esc(p.tema || '')}</span></div>
+    <div class="pinfo">${antiga ? `Mensagem de ${dataCurta(p.data)} · sem conexão para buscar a de hoje · ` : ''}${esc(p.traducao)}${p.licenca ? ' (' + esc(/public domain/i.test(p.licenca) ? 'domínio público' : p.licenca) + ')' : ''}</div>`;
+}
+async function atualizarPalavra(forcar){
+  const hoje = hojeBR(), cache = ld(PALAVRA_LS, null);
+  if (cache && cache.data === hoje) { mostrarPalavra(cache); return; }       // já temos a de hoje: nada de API
+  mostrarPalavra(cache, cache ? '' : 'carregando');
+  if (!navigator.onLine || palavraBuscando) { if (!cache && !navigator.onLine) mostrarPalavra(null); return; }
+  const ult = Number(ld(PALAVRA_TENT, 0));
+  if (!forcar && Date.now() - ult < 10 * 60 * 1000) { if (!cache) mostrarPalavra(null); return; }   // evita insistir com a API fora do ar
+  palavraBuscando = true; sv(PALAVRA_TENT, Date.now());
+  try {
+    const lista = await listaPalavra(), item = itemDoDia(lista, hoje);
+    const v = await buscarVersiculo(lista, item);
+    const nova = {data: hoje, ...v, tema: item.tema};
+    sv(PALAVRA_LS, nova); mostrarPalavra(nova);
+  } catch (e) {
+    console.warn('Palavra do Dia:', e.message);
+    mostrarPalavra(cache, '');
+    if (!cache) mostrarPalavra(null);
+  } finally { palavraBuscando = false; }
+}
+document.addEventListener('click', async e => {
+  if (!e.target.closest('#palavraShare')) return;
+  const p = ld(PALAVRA_LS, null); if (!p) return;
+  const txt = `“${p.texto}”\n${p.referencia}`;
+  try { if (navigator.share) { await navigator.share({title: 'Palavra do Dia', text: txt}); return; } } catch (err) { if (err && err.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(txt); toast('Mensagem copiada'); } catch { toast('Não foi possível compartilhar'); }
+});
+window.addEventListener('online', () => atualizarPalavra(true));
+setInterval(() => { const c = ld(PALAVRA_LS, null); if (!document.hidden && (!c || c.data !== hojeBR())) atualizarPalavra(); }, 60 * 1000);   // virada do dia com o app aberto
+document.addEventListener('visibilitychange', () => { if (!document.hidden) atualizarPalavra(); });
+
 // conexão
 /* Link de configuração: https://.../#cfg=<código>. O código leva URL + token em base64.
    O que vem depois do # nunca é enviado ao GitHub; o app lê, guarda no aparelho e apaga da barra de endereço. */
@@ -1247,6 +1353,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 
 render();
+atualizarPalavra(true);
 const cfgDoLink = lerCodigoCfg(location.hash);
 if (cfgDoLink) { history.replaceState(null, '', location.pathname + location.search); aplicarLinkCfg(cfgDoLink); }
 else sincronizar(true);

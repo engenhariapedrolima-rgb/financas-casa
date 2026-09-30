@@ -57,3 +57,14 @@ Para outra pessoa da casa usar: mesmo link, mesma URL e mesmo token, com o nome 
   - Resumo anual: mês a mês com acumulado, e gastos por categoria no ano com média mensal.
   O gerador de PDF (jsPDF) é baixado na primeira vez que um relatório é gerado e fica guardado no aparelho.
 - **Exportar CSV**: Relatórios > Dados > Exportar mês em CSV. O arquivo usa `;` e vírgula decimal e abre direto no Excel em português.
+
+## Palavra do Dia
+
+- **Card no Resumo**: mostra um versículo por dia, com tema, referência e botão de compartilhar.
+- **Lista curada** em `palavra.json`: 366 referências (uma por dia, incluindo 29/02), sem repetição no ano, em 14 temas (fé, confiança, sabedoria, família, provisão, trabalho, disciplina, gratidão, paz, esperança, amor, perseverança, educação dos filhos e responsabilidade financeira). Cada item tem `data` (MM-DD), `referencia`, `livro` (código usado pela API), `capitulo`, `versiculos` e `tema`. O texto não fica guardado no arquivo.
+- **Texto via API**: [bible-api.com](https://bible-api.com), tradução `almeida` (João Ferreira de Almeida, **domínio público**, uso comercial permitido). Para trocar a tradução, altere `api.traducao` em `palavra.json`; as opções estão em https://bible-api.com/data.
+  - As versões ARC, ARA, NVI e NAA são protegidas por direitos autorais das editoras e não estão nessa API.
+- **Conferência**: o app só mostra o texto quando o livro, o capítulo e cada versículo devolvidos pela API batem exatamente com a referência pedida, e a referência exibida é montada a partir do que a API devolveu. O texto não é alterado; só as quebras de linha são removidas. Todas as 366 referências foram conferidas contra o texto-fonte da tradução.
+- **Cache e offline**: a API é consultada uma vez por dia. A mensagem fica guardada no aparelho; sem internet, aparece a última guardada com a data dela, e ao voltar a conexão o app busca a do dia.
+- **Erros**: se a API estiver fora do ar, o card avisa sem inventar texto e tenta de novo depois (no máximo a cada 10 minutos, ou assim que a conexão voltar).
+- **Trocar um versículo**: edite a linha do dia em `palavra.json` e suba o arquivo no GitHub; o código do app não muda.

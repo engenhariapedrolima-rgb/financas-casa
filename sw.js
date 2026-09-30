@@ -1,7 +1,7 @@
 // Finanças da Casa — service worker
 // Ao publicar uma versão nova, troque o número abaixo: o app detecta e recarrega sozinho.
-const VERSAO = 'financas-casa-v5';
-const ARQUIVOS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+const VERSAO = 'financas-casa-v6';
+const ARQUIVOS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './palavra.json'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
