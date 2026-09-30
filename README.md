@@ -27,7 +27,7 @@ O app já funciona **sem planilha** (modo local, dados só no aparelho). A plani
 
 ## 3. Primeiro acesso
 
-1. Abra o link, vá em **Ajustes**, cole a URL e o token e informe seu nome.
+1. Abra o link, vá em **Relatórios → Conexão com a planilha**, cole a URL e o token e informe seu nome.
 2. **Salvar e testar**. Tudo o que você já tinha lançado no aparelho sobe para a planilha. Se a planilha estiver vazia, as categorias padrão também sobem.
 3. Instale o app: no Android/Chrome use **⋮ > Instalar app**; no iPhone/Safari use **Compartilhar > Adicionar à Tela de Início**.
 
@@ -46,7 +46,14 @@ Para outra pessoa da casa usar: mesmo link, mesma URL e mesmo token, com o nome 
   - Excluir uma conta que tem movimentação apenas a arquiva, preservando o histórico.
 - **A pagar**: mostra o que está vencido, o que vence nos próximos 45 dias e o que há a receber. Um toque em "Paguei" dá baixa.
 - **Categorias**: nome, cor e orçamento mensal. O Resumo mostra previsto × realizado e muda de cor quando passa de 85% e de 100%.
-- **Sincronização**: o lançamento é gravado primeiro no aparelho e entra numa fila. A cada 30 s, ao voltar a ter internet ou ao reabrir o app, a fila é enviada com trava contra envio simultâneo. Cada lançamento tem um id gerado no aparelho, e a planilha grava por id (atualiza ou acrescenta), então um reenvio nunca duplica. Exclusão é lógica (coluna `excluido = sim`).
+- **Sincronização automática**: não há botão para apertar. O lançamento é gravado no aparelho e sobe para a planilha na hora (sem internet, fica na fila e sobe quando a conexão volta). Com o app aberto, a cada 8 s ele busca só o que mudou desde a última consulta (o servidor carimba cada linha com o horário de gravação, coluna `sincEm`); a cada 5 min faz uma leitura completa por segurança. O envio tem trava contra envio simultâneo. Cada lançamento tem um id gerado no aparelho, e a planilha grava por id (atualiza ou acrescenta), então um reenvio nunca duplica. Exclusão é lógica (coluna `excluido = sim`).
 - **Datas**: o "hoje" é sempre calculado no fuso de Brasília (`America/Sao_Paulo`), independente do aparelho.
 - **Atualização do app**: ao publicar mudanças, troque `VERSAO` no `sw.js` (ex.: `financas-casa-v2`). O app detecta a mudança e recarrega sozinho.
-- **Exportar**: Ajustes > Exportar mês em CSV. O arquivo usa `;` e vírgula decimal e abre direto no Excel em português.
+- **Relatórios em PDF** (aba Relatórios, período = mês escolhido nas setas do topo):
+  - Resumo do mês: entradas, saídas, gastos por categoria com orçamento e saldos das contas.
+  - Lançamentos do mês: lista completa, em paisagem.
+  - Extrato de conta bancária: saldo anterior, movimentos com saldo corrido, saldo final e previstos.
+  - Contas a pagar e a receber: vencidas e próximos 60 dias.
+  - Resumo anual: mês a mês com acumulado, e gastos por categoria no ano com média mensal.
+  O gerador de PDF (jsPDF) é baixado na primeira vez que um relatório é gerado e fica guardado no aparelho.
+- **Exportar CSV**: Relatórios > Dados > Exportar mês em CSV. O arquivo usa `;` e vírgula decimal e abre direto no Excel em português.

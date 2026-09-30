@@ -116,6 +116,12 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .rb:last-child{border-bottom:0}.rb b{font-variant-numeric:tabular-nums}
 .rb i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}
 .tr{color:var(--tx2)}
+.rel{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--bd)}
+.rel:last-child{border-bottom:0}
+.rel>div{flex:1;min-width:0}
+.rel small{display:block;color:var(--tx2);font-size:12px;margin-top:2px}
+.rel select{margin-top:8px;padding:7px 10px}
+.rel .btn{white-space:nowrap}
 nav button{font-size:10.5px}
 .seg button.on.t{background:#2563eb;color:#fff}
 .hide{display:none!important}
@@ -138,7 +144,7 @@ nav button{font-size:10.5px}
 <main>
   <!-- RESUMO -->
   <section class="view on" id="v-resumo">
-    <div id="avisoCfg" class="aviso hide">Modo local: os dados ficam só neste aparelho. Configure a planilha em <b>Ajustes</b> para sincronizar e compartilhar.</div>
+    <div id="avisoCfg" class="aviso hide">Modo local: os dados ficam só neste aparelho. Configure a planilha em <b>Relatórios → Conexão</b> para sincronizar e compartilhar.</div>
     <div id="avisoVenc" class="aviso warn hide"></div>
     <div class="card hide" id="resBancos"><h2>Saldo nas contas agora</h2><div id="resBancosLista"></div></div>
     <div class="kpis">
@@ -209,6 +215,15 @@ nav button{font-size:10.5px}
   <!-- AJUSTES -->
   <section class="view" id="v-cfg">
     <div class="card">
+      <h2>Relatórios em PDF</h2>
+      <p class="sub">Período: <b id="relPeriodo"></b> — troque o mês nas setas do topo.</p>
+      <div class="rel"><div><b>Resumo do mês</b><small>Entradas, saídas, gastos por categoria, orçamento e saldos das contas</small></div><button class="btn mini" data-rel="resumo">Baixar PDF</button></div>
+      <div class="rel"><div><b>Lançamentos do mês</b><small>Lista completa com categoria, conta, forma, situação e quem lançou</small></div><button class="btn mini" data-rel="lanc">Baixar PDF</button></div>
+      <div class="rel" id="relExtratoBox"><div><b>Extrato de conta bancária</b><small>Saldo anterior, movimentos com saldo corrido e saldo final do mês</small><select id="relConta"></select></div><button class="btn mini" data-rel="extrato">Baixar PDF</button></div>
+      <div class="rel"><div><b>Contas a pagar e a receber</b><small>Vencidas e o que vence nos próximos 60 dias</small></div><button class="btn mini" data-rel="pagar">Baixar PDF</button></div>
+      <div class="rel"><div><b>Resumo anual</b><small id="relAnoTx">Mês a mês e gastos por categoria no ano</small></div><button class="btn mini" data-rel="anual">Baixar PDF</button></div>
+    </div>
+    <div class="card">
       <h2>Conexão com a planilha</h2>
       <label for="cfgUrl">URL do App da Web (Apps Script)</label>
       <input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
@@ -217,10 +232,10 @@ nav button{font-size:10.5px}
       <label for="cfgUser">Seu nome (aparece em quem lançou)</label>
       <input id="cfgUser" placeholder="Ex.: Pedro">
       <div class="acoes">
-        <button class="btn" id="cfgSalvar">Salvar e testar</button>
-        <button class="btn sec" id="cfgSync">Sincronizar agora</button>
+        <button class="btn" id="cfgSalvar">Salvar e conectar</button>
       </div>
       <p class="sub" id="cfgStatus" style="margin-top:10px"></p>
+      <p class="sub" style="margin-top:6px">Depois de conectado, a sincronização é automática: o que você lança sobe na hora e as mudanças dos outros aparelhos chegam em poucos segundos.</p>
     </div>
     <div class="card">
       <h2>Dados</h2>
@@ -241,7 +256,7 @@ nav button{font-size:10.5px}
   <button data-v="contas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>A pagar</button>
   <button data-v="bancos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h18M12 3l9 5H3z"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg>Bancos</button>
   <button data-v="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>Categorias</button>
-  <button data-v="cfg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 13.7H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 10h.1a2 2 0 0 1 0 4H21a1.7 1.7 0 0 0-1.6 1z"/></svg>Ajustes</button>
+  <button data-v="cfg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>Relatórios</button>
 </nav>
 
 <dialog id="dlg">
@@ -427,17 +442,30 @@ function statusSync(){
   else { dot.classList.add('ok'); tx.textContent = 'em dia'; }
   $('#avisoCfg').classList.toggle('hide', conectado());
 }
-async function api(method, payload){
+async function api(method, payload, desde){
   const opt = method === 'GET' ? {} : {method:'POST', body: JSON.stringify({token: cfg.token, ...payload})}; // text/plain: sem preflight CORS
-  const url = method === 'GET' ? `${cfg.url}?token=${encodeURIComponent(cfg.token)}&t=${Date.now()}` : cfg.url;
+  const url = method === 'GET' ? `${cfg.url}?token=${encodeURIComponent(cfg.token)}${desde ? '&desde=' + encodeURIComponent(desde) : ''}&t=${Date.now()}` : cfg.url;
   const r = await fetch(url, {...opt, redirect:'follow', cache:'no-store'});
   const j = await r.json();
   if (!j.ok) throw new Error(j.erro || 'Falha no servidor');
   return j;
 }
-async function sincronizar(){
-  if (!conectado() || sincronizando) return;   // trava: nunca dois envios simultâneos
+/* Sincronização automática:
+   - o que é lançado aqui sobe na hora (e fica na fila se estiver sem internet);
+   - a cada 8 s, com o app aberto, busca só o que mudou na planilha desde a última consulta;
+   - a cada 5 min (e ao conectar) faz uma leitura completa para garantir que nada escapou. */
+const INTERVALO = 8000, COMPLETA_A_CADA = 5 * 60 * 1000;
+let ultServidor = ld('fc_ultserv', ''), ultCompleta = 0, ressincronizar = false, renderPendente = false;
+const normLanc = l => { l.excluido = l.excluido === 'sim' || l.excluido === true; l.valor = Number(l.valor) || 0; return l; };
+function editandoCampo(){ const a = document.activeElement; return !!(a && a.closest && a.closest('main') && /INPUT|SELECT|TEXTAREA/.test(a.tagName)); }
+function renderSeguro(){ if (editandoCampo()) { renderPendente = true; return; } renderPendente = false; render(); }
+document.addEventListener('focusout', () => setTimeout(() => { if (renderPendente && !editandoCampo()) renderSeguro(); }, 300));
+
+async function sincronizar(completa){
+  if (!conectado()) return;
+  if (sincronizando) { ressincronizar = true; return; }   // trava: nunca dois envios simultâneos
   sincronizando = true; statusSync();
+  let mudou = false, ok = false;
   try {
     if (fila.length) {
       const lote = fila.slice(0, 200);
@@ -446,34 +474,46 @@ async function sincronizar(){
       fila = fila.filter(f => !lote.some(l => l.id === f.id && l.atualizadoEm === f.atualizadoEm));
       sv(LS.fila, fila);
     }
-    if (catPend) {
-      await api('POST', {action:'categorias', itens: cats});
-      catPend = false; sv(LS.catPend, false);
-    }
-    if (bancosPend) {
-      await api('POST', {action:'contas', itens: bancos});
-      bancosPend = false; sv(LS.bancosPend, false);
-    }
-    const j = await api('GET');
+    if (catPend) { await api('POST', {action:'categorias', itens: cats}); catPend = false; sv(LS.catPend, false); }
+    if (bancosPend) { await api('POST', {action:'contas', itens: bancos}); bancosPend = false; sv(LS.bancosPend, false); }
+
+    const cheia = completa === true || !ultServidor || Date.now() - ultCompleta > COMPLETA_A_CADA;
+    const desde = cheia ? '' : new Date(Date.parse(ultServidor) - 60000).toISOString();   // 1 min de folga
+    const j = await api('GET', null, desde);
     const pendentes = new Set(fila.map(f => f.id));
-    const novo = {};
-    j.lancamentos.forEach(l => { l.excluido = l.excluido === 'sim' || l.excluido === true; l.valor = Number(l.valor) || 0; novo[l.id] = l; });
-    fila.forEach(f => { novo[f.id] = f; });                        // alterações locais ainda não enviadas prevalecem
-    Object.values(lanc).forEach(l => { if (!novo[l.id] && pendentes.has(l.id)) novo[l.id] = l; });
-    lanc = novo;
+    if (cheia) {
+      const novo = {};
+      j.lancamentos.forEach(l => { novo[l.id] = normLanc(l); });
+      fila.forEach(f => { novo[f.id] = f; });                     // alterações locais ainda não enviadas prevalecem
+      const assinatura = o => Object.values(o).map(l => l.id + l.atualizadoEm + (l.excluido ? 1 : 0)).sort().join();
+      if (assinatura(novo) !== assinatura(lanc)) mudou = true;
+      lanc = novo; ultCompleta = Date.now();
+    } else {
+      j.lancamentos.forEach(l => {
+        normLanc(l);
+        if (pendentes.has(l.id)) return;
+        const at = lanc[l.id];
+        if (!at || at.atualizadoEm !== l.atualizadoEm || at.excluido !== l.excluido) { lanc[l.id] = l; mudou = true; }
+      });
+    }
+    const antes = JSON.stringify([cats, bancos]);
     if (j.categorias.length) { cats = j.categorias.map(c => ({...c, orcamento: Number(c.orcamento) || 0})); }
     else if (cats.length) { catPend = true; }                       // planilha nova: envia as categorias padrão
     if (j.contas && j.contas.length) {
       bancos = j.contas.map(b => ({...b, saldoInicial: Number(b.saldoInicial) || 0, ativa: b.ativa === 'sim' || b.ativa === true}));
     } else if (bancos.length) { bancosPend = true; }
+    if (JSON.stringify([cats, bancos]) !== antes) mudou = true;
+
+    ultServidor = j.servidor; sv('fc_ultserv', ultServidor);
     ultSync = agoraISO(); sv(LS.ult, ultSync);
-    erroSync = '';
-    persistir();
-    if (fila.length || catPend || bancosPend) setTimeout(sincronizar, 500);
+    erroSync = ''; ok = true;
+    if (mudou) persistir();
   } catch (e) {
     erroSync = e.message || String(e);
   } finally {
-    sincronizando = false; statusSync(); render();
+    sincronizando = false; statusSync();
+    if (mudou) renderSeguro(); else if (aba === 'cfg' && !editandoCampo()) renderCfg();
+    if (ok && (ressincronizar || fila.length || catPend || bancosPend)) { ressincronizar = false; setTimeout(sincronizar, 300); }
   }
 }
 
@@ -644,16 +684,22 @@ function renderCats(){
 }
 
 function renderCfg(){
+  $('#relPeriodo').textContent = nomeMes(mes);
+  $('#relAnoTx').textContent = `Ano de ${mes.slice(0, 4)}: mês a mês e gastos por categoria`;
+  const bs = bancos.filter(b => b.ativa !== false), selAtual = $('#relConta').value || extConta;
+  $('#relConta').innerHTML = bs.map(b => `<option value="${esc(b.id)}" ${b.id === selAtual ? 'selected' : ''}>${esc(b.nome)}</option>`).join('');
+  $('#relExtratoBox').classList.toggle('hide', !bs.length);
+  if (editandoCampo()) return;
   $('#cfgUrl').value = cfg.url; $('#cfgTok').value = cfg.token; $('#cfgUser').value = cfg.usuario;
   const quando = ultSync ? new Date(ultSync).toLocaleString('pt-BR', {timeZone: TZ}) : 'nunca';
   $('#cfgStatus').innerHTML = conectado()
-    ? `Última sincronização: ${quando}. Na fila: ${fila.length}.${erroSync ? `<br><span class="sai">Erro: ${esc(erroSync)}</span>` : ''}`
+    ? `Sincronização automática ligada. Última: ${quando}. Aguardando envio: ${fila.length}.${erroSync ? `<br><span class="sai">Erro: ${esc(erroSync)}</span>` : ''}`
     : 'Sem planilha configurada — modo local.';
 }
 
 function render(){
   $('#mesTx').textContent = nomeMes(mes);
-  $('#mesnav').classList.toggle('hide', !(aba === 'resumo' || aba === 'lanc' || aba === 'bancos'));
+  $('#mesnav').classList.toggle('hide', !(aba === 'resumo' || aba === 'lanc' || aba === 'bancos' || aba === 'cfg'));
   $$('.chartbox').forEach(c => c.classList.toggle('semchart', !window.Chart));
   statusSync();
   ({resumo: renderResumo, lanc: renderLanc, contas: renderContas, bancos: renderBancos, cat: renderCats, cfg: renderCfg})[aba]();
@@ -779,7 +825,7 @@ $('#nav').onclick = e => {
 $('#mesAnt').onclick = () => { mes = somaMes(mes, -1); render(); };
 $('#mesProx').onclick = () => { mes = somaMes(mes, 1); render(); };
 $('#fab').onclick = () => abrirForm();
-$('#btnSync').onclick = () => { if (!conectado()) { toast('Configure a planilha em Ajustes'); return; } sincronizar(); };
+$('#btnSync').onclick = () => { if (!conectado()) { toast('Configure a planilha em Relatórios → Conexão'); return; } sincronizar(true); };
 
 document.addEventListener('click', e => {
   const pagar = e.target.closest('[data-pagar]');
@@ -895,7 +941,223 @@ $('#bNova').onclick = () => abrirConta();
 $('#bTransf').onclick = () => abrirForm(null, {tipo: 'transf', conta: extConta});
 $('#bExtSel').onchange = e => { extConta = e.target.value; renderBancos(); };
 
-// ajustes
+/* ================== relatórios em PDF (jsPDF carregado sob demanda) ================== */
+const JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+const AUTOTABLE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+function carregarScript(src){
+  return new Promise((ok, erro) => { const s = document.createElement('script'); s.src = src; s.onload = ok;
+    s.onerror = () => erro(new Error('Não foi possível carregar o gerador de PDF. Verifique a internet.')); document.head.appendChild(s); });
+}
+let pdfPronto = null;
+function carregarPDF(){
+  if (!pdfPronto) pdfPronto = (async () => {
+    if (!window.jspdf) await carregarScript(JSPDF_URL);
+    if (!window.jspdf.jsPDF.API.autoTable) await carregarScript(AUTOTABLE_URL);
+  })().catch(e => { pdfPronto = null; throw e; });
+  return pdfPronto;
+}
+let iconeData = null;
+async function iconePDF(){
+  if (iconeData !== null) return iconeData;
+  try { const b = await (await fetch('icon-192.png')).blob();
+    iconeData = await new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = () => ok(''); fr.readAsDataURL(b); });
+  } catch { iconeData = ''; }
+  return iconeData;
+}
+const VERDE = [15,118,110], ESCURO = [22,33,31], CINZA = [91,107,103], VERM = [185,28,28], VERD2 = [21,128,61], LARANJA = [180,83,9];
+const pTxt = s => String(s ?? '').replace(/[\u2212\u2013]/g, '-').replace(/[\u2192\u21c4]/g, '>').replace(/[^\x00-\xff]/g, '');
+const dataBR = d => d ? d.split('-').reverse().join('/') : '';
+const agoraBR = () => new Date().toLocaleString('pt-BR', {timeZone: TZ, day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+const pct = (v, t) => t ? (v / t * 100).toFixed(1).replace('.', ',') + '%' : '-';
+const soma = (arr, f = l => l.valor) => cent(arr.reduce((s, l) => s + f(l), 0));
+function agrupar(arr, chave){ const o = {}; arr.forEach(l => { const k = chave(l) || '(sem categoria)'; o[k] = (o[k] || 0) + l.valor; }); return Object.entries(o).sort((a, b) => b[1] - a[1]); }
+
+async function novoPDF(titulo, periodo, paisagem){
+  await carregarPDF();
+  const doc = new window.jspdf.jsPDF({unit: 'mm', format: 'a4', orientation: paisagem ? 'landscape' : 'portrait'});
+  const W = doc.internal.pageSize.getWidth();
+  doc.setFillColor(...VERDE); doc.rect(0, 0, W, 26, 'F');
+  let x = 14; const ic = await iconePDF();
+  if (ic) { try { doc.addImage(ic, 'PNG', 12, 4, 18, 18); x = 34; } catch {} }
+  doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text('Finanças da Casa', x, 12);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.text(pTxt(titulo + '  |  ' + periodo), x, 19.5);
+  doc.setFontSize(8); doc.text(pTxt('Gerado em ' + agoraBR() + (cfg.usuario ? ' por ' + cfg.usuario : '')), W - 14, 19.5, {align: 'right'});
+  doc.setTextColor(...ESCURO); doc._y = 34;
+  return doc;
+}
+function secao(doc, txt){
+  if (doc._y > doc.internal.pageSize.getHeight() - 35) { doc.addPage(); doc._y = 18; }
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(...VERDE); doc.text(pTxt(txt), 14, doc._y);
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(...ESCURO); doc._y += 3;
+}
+function tabela(doc, head, body, opt = {}){
+  doc.autoTable({
+    startY: doc._y, head: [head.map(pTxt)], body: body.map(r => r.map(pTxt)), foot: opt.foot ? [opt.foot.map(pTxt)] : undefined,
+    theme: 'striped', margin: {left: 14, right: 14, top: 16, bottom: 16}, showFoot: 'lastPage',
+    styles: {font: 'helvetica', fontSize: 8.5, cellPadding: 1.8, textColor: ESCURO},
+    headStyles: {fillColor: VERDE, textColor: 255}, footStyles: {fillColor: [230,244,242], textColor: ESCURO, fontStyle: 'bold'},
+    columnStyles: opt.cols || {},
+    didParseCell: d => {
+      const c = (opt.cols || {})[d.column.index];
+      if (c && c.halign) d.cell.styles.halign = c.halign;   // cabeçalho e rodapé alinhados com a coluna
+      if (d.section !== 'head' && typeof d.cell.raw === 'string' && /^-\s?R\$/.test(d.cell.raw)) d.cell.styles.textColor = VERM;
+    }
+  });
+  doc._y = doc.lastAutoTable.finalY + 9;
+}
+function kpisPDF(doc, itens){
+  const W = doc.internal.pageSize.getWidth(), g = 4, w = (W - 28 - g * (itens.length - 1)) / itens.length;
+  itens.forEach(([rot, val, cor], i) => {
+    const x = 14 + i * (w + g);
+    doc.setDrawColor(226,232,230); doc.setFillColor(247,250,249); doc.roundedRect(x, doc._y, w, 18, 2, 2, 'FD');
+    doc.setFontSize(8); doc.setTextColor(...CINZA); doc.text(pTxt(rot), x + 3, doc._y + 6);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(...(cor || ESCURO)); doc.text(pTxt(val), x + 3, doc._y + 14);
+    doc.setFont('helvetica', 'normal');
+  });
+  doc.setTextColor(...ESCURO); doc._y += 26;
+}
+function notaPDF(doc, txt){
+  doc.setFontSize(8.5); doc.setTextColor(...CINZA);
+  const linhas = doc.splitTextToSize(pTxt(txt), doc.internal.pageSize.getWidth() - 28);
+  doc.text(linhas, 14, doc._y); doc._y += linhas.length * 4 + 4; doc.setTextColor(...ESCURO);
+}
+function finalizarPDF(doc, nome){
+  const n = doc.getNumberOfPages();
+  for (let i = 1; i <= n; i++) {
+    doc.setPage(i);
+    const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8); doc.setTextColor(...CINZA);
+    doc.text('Finanças da Casa', 14, H - 8); doc.text(`Página ${i} de ${n}`, W - 14, H - 8, {align: 'right'});
+  }
+  doc.save(nome);
+}
+const R_ = {halign: 'right'};
+const descLanc = l => l.tipo === 'transf' ? `${l.descricao || 'Transferência'} (${nomeConta(l.conta)} > ${nomeConta(l.contaDestino)})`
+  : l.tipo === 'ajuste' ? `Ajuste de saldo - ${nomeConta(l.conta)}` : (l.descricao || l.categoria);
+const valorSinal = l => l.tipo === 'entrada' ? brl(l.valor) : l.tipo === 'saida' ? brl(-l.valor) : l.tipo === 'ajuste' ? brl(l.valor) : brl(l.valor) + ' (transf.)';
+
+const RELATORIOS = {
+  async resumo(){
+    const it = doMes(mes), ent = soma(it.filter(l => l.tipo === 'entrada')), sai = soma(it.filter(l => l.tipo === 'saida'));
+    const pend = soma(it.filter(l => l.tipo === 'saida' && l.status === 'pendente'));
+    const doc = await novoPDF('Resumo do mês', nomeMes(mes));
+    kpisPDF(doc, [['Entradas', brl(ent), VERD2], ['Saídas', brl(sai), VERM], ['Resultado', brl(ent - sai), ent - sai < 0 ? VERM : VERD2], ['Falta pagar', brl(pend), LARANJA]]);
+    secao(doc, 'Saídas por categoria');
+    const sc = agrupar(it.filter(l => l.tipo === 'saida'), l => l.categoria);
+    tabela(doc, ['Categoria', 'Gasto', '% das saídas', 'Orçamento', 'Situação'],
+      sc.length ? sc.map(([c, v]) => { const o = (cats.find(x => x.nome === c) || {}).orcamento || 0;
+        return [c, brl(v), pct(v, sai), o ? brl(o) : 'sem orçamento', o ? (v > o ? 'Acima em ' + brl(v - o) : 'Dentro (' + pct(v, o) + ')') : '']; })
+        : [['Nenhuma saída no mês', '', '', '', '']],
+      {foot: ['Total', brl(sai), sai ? '100%' : '-', '', ''], cols: {1: R_, 2: R_, 3: R_}});
+    secao(doc, 'Entradas por categoria');
+    const ec = agrupar(it.filter(l => l.tipo === 'entrada'), l => l.categoria);
+    tabela(doc, ['Categoria', 'Valor', '% das entradas'], ec.length ? ec.map(([c, v]) => [c, brl(v), pct(v, ent)]) : [['Nenhuma entrada no mês', '', '']],
+      {foot: ['Total', brl(ent), ent ? '100%' : '-'], cols: {1: R_, 2: R_}});
+    const bs = bancosAtivos();
+    if (bs.length) {
+      secao(doc, 'Saldos das contas bancárias');
+      tabela(doc, ['Conta', 'Tipo', `Saldo em ${dataBR(fimMes(mes))}`, 'Saldo atual'],
+        bs.map(b => [b.nome, b.banco, brl(saldoConta(b, fimMes(mes))), brl(saldoConta(b))]),
+        {foot: ['Total', '', brl(soma(bs, b => saldoConta(b, fimMes(mes)))), brl(soma(bs, b => saldoConta(b)))], cols: {2: R_, 3: R_}});
+    }
+    const venc = ativos().filter(l => l.tipo === 'saida' && l.status === 'pendente' && l.data < hojeBR());
+    if (venc.length) notaPDF(doc, `Atenção: ${venc.length} conta(s) vencida(s) em aberto, somando ${brl(soma(venc))}.`);
+    notaPDF(doc, 'Transferências entre contas e ajustes de saldo não entram nos totais de entradas e saídas.');
+    finalizarPDF(doc, `resumo-${mes}.pdf`);
+  },
+  async lanc(){
+    const it = doMes(mes).sort((a, b) => a.data.localeCompare(b.data) || (a.criadoEm || '').localeCompare(b.criadoEm || ''));
+    const ent = soma(it.filter(l => l.tipo === 'entrada')), sai = soma(it.filter(l => l.tipo === 'saida'));
+    const doc = await novoPDF('Lançamentos do mês', nomeMes(mes), true);
+    kpisPDF(doc, [['Lançamentos', String(it.length)], ['Entradas', brl(ent), VERD2], ['Saídas', brl(sai), VERM], ['Resultado', brl(ent - sai), ent - sai < 0 ? VERM : VERD2]]);
+    tabela(doc, ['Data', 'Descrição', 'Categoria', 'Conta', 'Forma', 'Situação', 'Quem lançou', 'Valor'],
+      it.length ? it.map(l => [dataBR(l.data), descLanc(l), l.categoria || '-', l.tipo === 'transf' ? '-' : (nomeConta(l.conta) || '-'),
+        l.forma || '-', l.status === 'pago' ? (l.tipo === 'entrada' ? 'Recebido' : 'Pago') : 'Pendente', l.usuario || '-', valorSinal(l)])
+        : [['', 'Nenhum lançamento no mês', '', '', '', '', '', '']],
+      {foot: ['', '', '', '', '', '', 'Resultado', brl(ent - sai)], cols: {0: {cellWidth: 20}, 1: {cellWidth: 70}, 7: {...R_, cellWidth: 32}}});
+    finalizarPDF(doc, `lancamentos-${mes}.pdf`);
+  },
+  async extrato(){
+    const b = bancos.find(x => x.id === $('#relConta').value);
+    if (!b) throw new Error('Cadastre uma conta em Bancos primeiro');
+    const ini = mes + '-01', fim = fimMes(mes);
+    const anterior = saldoConta(b, somaDias(ini, -1));
+    const doMesConta = ativos().filter(l => l.data >= ini && l.data <= fim && l.data >= (b.dataInicial || '') && (l.conta === b.id || l.contaDestino === b.id))
+      .sort((x, y) => x.data.localeCompare(y.data) || (x.criadoEm || '').localeCompare(y.criadoEm || ''));
+    const realizados = doMesConta.filter(l => efeitoConta(l, b.id) !== 0);
+    const previstos = doMesConta.filter(l => l.status === 'pendente' && l.tipo !== 'ajuste');
+    let corrido = anterior, entradas = 0, saidas = 0;
+    const linhas = realizados.map(l => { const e = efeitoConta(l, b.id); corrido = cent(corrido + e); if (e > 0) entradas += e; else saidas -= e;
+      return [dataBR(l.data), descLanc(l), l.tipo === 'transf' ? 'Transferência' : l.tipo === 'ajuste' ? 'Ajuste' : (l.categoria || '-'),
+        e > 0 ? brl(e) : '', e < 0 ? brl(e) : '', brl(corrido)]; });
+    const doc = await novoPDF(`Extrato - ${b.nome}`, nomeMes(mes));
+    kpisPDF(doc, [['Saldo anterior', brl(anterior)], ['Entradas', brl(entradas), VERD2], ['Saídas', brl(-saidas), VERM], ['Saldo final', brl(corrido), corrido < 0 ? VERM : VERD2]]);
+    secao(doc, 'Movimentos realizados');
+    tabela(doc, ['Data', 'Descrição', 'Tipo/Categoria', 'Entrada', 'Saída', 'Saldo'],
+      [['', 'Saldo anterior', '', '', '', brl(anterior)], ...linhas],
+      {foot: ['', 'Saldo final do período', '', brl(entradas), brl(-saidas), brl(corrido)], cols: {0: {cellWidth: 20}, 3: R_, 4: R_, 5: R_}});
+    if (previstos.length) {
+      secao(doc, 'Previstos no mês (ainda pendentes)');
+      tabela(doc, ['Vencimento', 'Descrição', 'Categoria', 'Valor'],
+        previstos.map(l => [dataBR(l.data), descLanc(l), l.categoria || '-', brl(efeitoConta(l, b.id, true))]),
+        {foot: ['', 'Saldo final previsto', '', brl(cent(corrido + soma(previstos, l => efeitoConta(l, b.id, true))))], cols: {0: {cellWidth: 24}, 3: R_}});
+    }
+    notaPDF(doc, `Saldo inicial cadastrado: ${brl(b.saldoInicial)} em ${dataBR(b.dataInicial)}. Tipo de conta: ${b.banco}.`);
+    finalizarPDF(doc, `extrato-${b.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_')}-${mes}.pdf`);
+  },
+  async pagar(){
+    const hoje = hojeBR(), lim = somaDias(hoje, 60);
+    const pend = ativos().filter(l => l.status === 'pendente' && (l.tipo === 'saida' || l.tipo === 'entrada') && l.data <= lim)
+      .sort((a, b) => a.data.localeCompare(b.data));
+    const pag = pend.filter(l => l.tipo === 'saida'), rec = pend.filter(l => l.tipo === 'entrada');
+    const venc = pag.filter(l => l.data < hoje);
+    const doc = await novoPDF('Contas a pagar e a receber', `até ${dataBR(lim)}`);
+    kpisPDF(doc, [['Vencidas', brl(soma(venc)), VERM], ['A pagar (60 dias)', brl(soma(pag) - soma(venc)), LARANJA], ['A receber', brl(soma(rec)), VERD2]]);
+    const linha = l => [dataBR(l.data), l.data < hoje ? 'Vencida' : 'A vencer', descLanc(l), l.categoria || '-', nomeConta(l.conta) || '-', brl(l.valor)];
+    secao(doc, 'A pagar');
+    tabela(doc, ['Vencimento', 'Situação', 'Descrição', 'Categoria', 'Conta', 'Valor'],
+      pag.length ? pag.map(linha) : [['', '', 'Nada a pagar no período', '', '', '']],
+      {foot: ['', '', 'Total', '', '', brl(soma(pag))], cols: {0: {cellWidth: 22}, 5: R_}});
+    secao(doc, 'A receber');
+    tabela(doc, ['Previsão', 'Situação', 'Descrição', 'Categoria', 'Conta', 'Valor'],
+      rec.length ? rec.map(l => { const x = linha(l); x[1] = l.data < hoje ? 'Atrasado' : 'A receber'; return x; }) : [['', '', 'Nada a receber no período', '', '', '']],
+      {foot: ['', '', 'Total', '', '', brl(soma(rec))], cols: {0: {cellWidth: 22}, 5: R_}});
+    finalizarPDF(doc, `contas-a-pagar-${hoje}.pdf`);
+  },
+  async anual(){
+    const ano = mes.slice(0, 4), meses = [...Array(12)].map((_, i) => `${ano}-${String(i + 1).padStart(2, '0')}`);
+    let acum = 0;
+    const linhas = meses.map(m => { const it = doMes(m), e = soma(it.filter(l => l.tipo === 'entrada')), s = soma(it.filter(l => l.tipo === 'saida'));
+      acum = cent(acum + e - s); return [nomeMes(m).split(' ')[0], brl(e), brl(s), brl(e - s), brl(acum), {e, s}]; });
+    const doAno = ativos().filter(l => (l.data || '').startsWith(ano + '-'));
+    const ent = soma(doAno.filter(l => l.tipo === 'entrada')), sai = soma(doAno.filter(l => l.tipo === 'saida'));
+    const hoje = hojeBR(), nMeses = ano === hoje.slice(0, 4) ? Number(hoje.slice(5, 7)) : 12;
+    const doc = await novoPDF('Resumo anual', ano);
+    kpisPDF(doc, [['Entradas no ano', brl(ent), VERD2], ['Saídas no ano', brl(sai), VERM], ['Resultado', brl(ent - sai), ent - sai < 0 ? VERM : VERD2], ['Gasto médio/mês', brl(cent(sai / nMeses))]]);
+    secao(doc, 'Mês a mês');
+    tabela(doc, ['Mês', 'Entradas', 'Saídas', 'Resultado', 'Acumulado'], linhas.map(l => l.slice(0, 5)),
+      {foot: ['Total', brl(ent), brl(sai), brl(ent - sai), ''], cols: {1: R_, 2: R_, 3: R_, 4: R_}});
+    secao(doc, 'Saídas por categoria no ano');
+    const sc = agrupar(doAno.filter(l => l.tipo === 'saida'), l => l.categoria);
+    tabela(doc, ['Categoria', 'Total no ano', `Média mensal (${nMeses} meses)`, '% das saídas'],
+      sc.length ? sc.map(([c, v]) => [c, brl(v), brl(cent(v / nMeses)), pct(v, sai)]) : [['Nenhuma saída no ano', '', '', '']],
+      {foot: ['Total', brl(sai), brl(cent(sai / nMeses)), sai ? '100%' : '-'], cols: {1: R_, 2: R_, 3: R_}});
+    secao(doc, 'Entradas por categoria no ano');
+    const ec = agrupar(doAno.filter(l => l.tipo === 'entrada'), l => l.categoria);
+    tabela(doc, ['Categoria', 'Total no ano', '% das entradas'], ec.length ? ec.map(([c, v]) => [c, brl(v), pct(v, ent)]) : [['Nenhuma entrada no ano', '', '']],
+      {foot: ['Total', brl(ent), ent ? '100%' : '-'], cols: {1: R_, 2: R_}});
+    finalizarPDF(doc, `resumo-anual-${ano}.pdf`);
+  }
+};
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-rel]'); if (!b || b.disabled) return;
+  const txt = b.textContent; b.disabled = true; b.textContent = 'Gerando…';
+  try { await RELATORIOS[b.dataset.rel](); toast('PDF gerado ✔'); }
+  catch (err) { toast(err.message || 'Erro ao gerar o PDF'); console.error(err); }
+  finally { b.disabled = false; b.textContent = txt; }
+});
+
+// conexão
 $('#cfgSalvar').onclick = async () => {
   cfg = {url: $('#cfgUrl').value.trim(), token: $('#cfgTok').value.trim(), usuario: $('#cfgUser').value.trim()};
   sv(LS.cfg, cfg);
@@ -903,10 +1165,9 @@ $('#cfgSalvar').onclick = async () => {
   $('#cfgStatus').textContent = 'Testando conexão…';
   // o que já existe neste aparelho sobe para a planilha na primeira conexão
   if (!ultSync) { ativos().forEach(l => { if (!fila.some(f => f.id === l.id)) fila.push(l); }); sv(LS.fila, fila); }
-  await sincronizar();
-  toast(erroSync ? 'Não conectou: ' + erroSync : 'Conectado à planilha ✔');
+  ultServidor = ''; await sincronizar(true);
+  toast(erroSync ? 'Não conectou: ' + erroSync : 'Conectado à planilha ✔ — sincronização automática ligada');
 };
-$('#cfgSync').onclick = () => sincronizar();
 $('#btnCsv').onclick = () => {
   const it = doMes(mes).sort((a, b) => a.data.localeCompare(b.data));
   const q = s => `"${String(s ?? '').replace(/"/g, '""')}"`;
@@ -920,13 +1181,14 @@ $('#btnCsv').onclick = () => {
 $('#btnLimpar').onclick = () => {
   if (fila.length && !confirm(`Há ${fila.length} lançamento(s) ainda não enviados à planilha e eles serão perdidos. Continuar?`)) return;
   if (!confirm('Apagar os dados guardados neste aparelho?')) return;
-  lanc = {}; fila = []; catPend = false; ultSync = ''; bancos = []; bancosPend = false; cats = CATS_PADRAO.map(c => ({...c}));
-  sv(LS.ult, ''); persistir(); render(); if (conectado()) sincronizar();
+  lanc = {}; fila = []; catPend = false; ultSync = ''; bancos = []; bancosPend = false; ultServidor = ''; sv('fc_ultserv', ''); cats = CATS_PADRAO.map(c => ({...c}));
+  sv(LS.ult, ''); persistir(); render(); if (conectado()) sincronizar(true);
 };
 
 // sincronização automática em segundo plano
-setInterval(sincronizar, 30000);
-window.addEventListener('online', sincronizar);
+setInterval(() => { if (!document.hidden) sincronizar(); }, INTERVALO);
+window.addEventListener('online', () => sincronizar());
+window.addEventListener('focus', () => sincronizar());
 window.addEventListener('offline', statusSync);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) sincronizar(); });
 
@@ -945,7 +1207,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 
 render();
-sincronizar();
+sincronizar(true);
 </script>
 </body>
 </html>
