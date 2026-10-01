@@ -147,6 +147,38 @@ nav button{font-size:10.5px}
 .kpi .det{display:block;margin-top:6px;font-size:12px;color:var(--tx2)}
 .kpi.apos{background:linear-gradient(135deg,var(--pri2),var(--card))}
 .kpi[data-irbanco]{cursor:pointer}
+.hl-dir{display:flex;align-items:center;gap:8px}
+.consbtn{position:relative;border:0;background:rgba(255,255,255,.14);color:#fff;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.consbtn svg{width:19px;height:19px}
+.consbtn i{position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;background:#fbbf24;border:2px solid var(--pri)}
+.conscard{display:flex;gap:12px;align-items:flex-start;cursor:pointer}
+.conscard .av{flex:none;width:40px;height:40px;border-radius:50%;background:var(--pri2);color:var(--pri);display:grid;place-items:center}
+.conscard .av svg{width:22px;height:22px}
+.conscard .ct{flex:1;min-width:0}
+.conscard .ct b{font-size:14px}
+.conscard .ct p{margin-top:3px;font-size:14px;color:var(--tx);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.conscard .nova{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;color:#fff;background:var(--alerta);border-radius:99px;padding:1px 8px;vertical-align:1px}
+.cons-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.cons-top select{width:auto;padding:7px 10px;font-size:13px}
+#consMsgs{display:flex;flex-direction:column;gap:10px}
+.bolha{max-width:86%;padding:10px 13px;border-radius:16px;font-size:14.5px;line-height:1.45;word-wrap:break-word}
+.bolha.cons{align-self:flex-start;background:var(--pri2);border-bottom-left-radius:5px}
+.bolha.pes{align-self:flex-end;background:var(--pri);color:#fff;border-bottom-right-radius:5px}
+@media (prefers-color-scheme:dark){.bolha.pes{color:#062a27}}
+.bolha .meta{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px;font-size:11px;opacity:.7}
+.bolha .fb{display:flex;gap:4px}
+.bolha .fb button{border:0;background:none;cursor:pointer;font-size:14px;opacity:.45;padding:0 2px}
+.bolha .fb button.on{opacity:1}
+.bolha.digitando{opacity:.7;font-style:italic}
+.cons-input{display:flex;gap:8px;align-items:flex-end;margin-top:12px}
+.cons-input textarea{flex:1;resize:none;min-height:44px;max-height:140px;border:1px solid var(--bd);background:var(--card);border-radius:12px;padding:11px 12px;font:inherit;color:inherit;outline:none}
+.cons-input textarea:focus{border-color:var(--pri)}
+.cons-sug{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.cons-sug button{border:1px solid var(--bd);background:var(--card);border-radius:99px;padding:6px 11px;font-size:12.5px;cursor:pointer;color:var(--tx)}
+details.card summary{cursor:pointer;font-weight:600;font-size:14px}
+.memit{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:14px}
+.memit:last-child{border-bottom:0}
+.memit button{border:0;background:none;color:var(--sai);cursor:pointer;font-size:18px}
 .hide{display:none!important}
 </style>
 </head>
@@ -155,7 +187,10 @@ nav button{font-size:10.5px}
 <header>
   <div class="hl">
     <h1>Finanças da Casa</h1>
-    <button class="sync" id="btnSync" title="Sincronizar agora"><span class="dot" id="dot"></span><span id="syncTx">local</span></button>
+    <div class="hl-dir">
+      <button class="consbtn hide" id="btnCons" title="Consultor financeiro" aria-label="Consultor financeiro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg><i class="hide" id="consDot"></i></button>
+      <button class="sync" id="btnSync" title="Sincronizar agora"><span class="dot" id="dot"></span><span id="syncTx">local</span></button>
+    </div>
   </div>
   <div class="mesnav" id="mesnav">
     <button id="mesAnt" aria-label="Mês anterior">‹</button>
@@ -170,6 +205,7 @@ nav button{font-size:10.5px}
     <div id="avisoCfg" class="aviso hide">Modo local: os dados ficam só neste aparelho. Configure a planilha em <b>Relatórios → Conexão</b> para sincronizar e compartilhar.</div>
     <div id="avisoVenc" class="aviso warn hide"></div>
     <div class="palavra carregando" id="palavra" aria-live="polite"></div>
+    <div class="card conscard hide" id="consCard" role="button" tabindex="0"></div>
     <div class="kpis hide" id="kBancos">
       <div class="kpi big" data-irbanco=""><small>Saldo nas contas agora</small><b id="kContas">—</b><div class="kl" id="kContasLista"></div></div>
       <div class="kpi big apos"><small id="kAposTx">Saldo após pagar os pendentes</small><b id="kApos">—</b><span class="det" id="kAposDet"></span></div>
@@ -218,6 +254,28 @@ nav button{font-size:10.5px}
     <div class="card hide" id="bArqCard"><h2>Contas arquivadas</h2>
       <p class="sub" style="margin-bottom:6px">Contas excluídas que tinham movimentações ficam aqui, com o histórico preservado.</p><div id="bArq"></div></div>
     <div class="card" id="bExtCard"><h2>Extrato do mês</h2><select id="bExtSel" style="margin-bottom:8px"></select><div id="bExt"></div><p class="sub" id="bExtFim" style="margin-top:8px;text-align:right"></p></div>
+  </section>
+
+  <!-- CONSULTOR -->
+  <section class="view" id="v-consultor">
+    <div class="cons-top">
+      <button class="btn mini sec" id="consVoltar">‹ Voltar</button>
+      <label class="sub" style="display:flex;align-items:center;gap:6px;margin:0">Mensagens
+        <select id="consFreq"><option value="normal">normal</option><option value="pouca">poucas</option><option value="alertas">só alertas</option></select></label>
+    </div>
+    <div class="card"><div id="consMsgs"></div></div>
+    <form class="cons-input" id="consForm">
+      <textarea id="consTxt" rows="1" placeholder="Pergunte ao seu consultor…" maxlength="2000"></textarea>
+      <button class="btn" id="consEnviar" type="submit">Enviar</button>
+    </form>
+    <div class="cons-sug" id="consSug">
+      <button type="button">Como estou este mês?</button>
+      <button type="button">Onde posso economizar?</button>
+      <button type="button">Consigo pagar tudo até o fim do mês?</button>
+    </div>
+    <p class="sub" style="margin:12px 2px">O consultor recebe só totais por categoria e saldos, sem nomes, descrições ou bancos. O que você digitar aqui vai como está para a IA (<span id="consProv">Google Gemini</span>): evite dados pessoais. É uma orientação automática e não substitui um profissional.</p>
+    <details class="card" id="consMemBox"><summary>O que o consultor sabe sobre vocês</summary><div id="consMem" style="margin-top:8px"></div></details>
+    <div class="acoes" style="margin-top:0"><button class="btn sec mini" id="consAnalisar" type="button">Pedir uma análise agora</button></div>
   </section>
 
   <!-- CATEGORIAS -->
@@ -410,6 +468,8 @@ let fila = ld(LS.fila, []);         // lançamentos ainda não enviados à plani
 let catPend = ld(LS.catPend, false);
 let bancos = ld(LS.bancos, []);     // contas bancárias
 let bancosPend = ld(LS.bancosPend, false);
+let consultor = ld('fc_consultor', null);   // {ativo, provedor, frequencia, mensagens, memoria}
+let consEnviando = false;
 let extConta = '';
 let ultSync = ld(LS.ult, '');
 let mes = hojeBR().slice(0, 7);
@@ -553,6 +613,11 @@ async function sincronizar(completa){
       bancos = j.contas.map(b => ({...b, saldoInicial: Number(b.saldoInicial) || 0, ativa: b.ativa === 'sim' || b.ativa === true}));
     } else if (bancos.length) { bancosPend = true; }
     if (JSON.stringify([cats, bancos]) !== antes) mudou = true;
+    if (j.consultor) {
+      const c0 = JSON.stringify(consultor);
+      consultor = j.consultor; sv('fc_consultor', consultor);
+      if (JSON.stringify(consultor) !== c0) mudou = true;
+    }
 
     ultServidor = j.servidor; sv('fc_ultserv', ultServidor);
     ultSync = agoraISO(); sv(LS.ult, ultSync);
@@ -634,6 +699,7 @@ function linhaItem(l, extra = '', efeito, acao = ''){
 }
 
 function renderResumo(){
+  renderConsCard();
   const it = doMes(mes);
   const ent = it.filter(l => l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0);
   const sai = it.filter(l => l.tipo === 'saida').reduce((s, l) => s + l.valor, 0);
@@ -776,7 +842,8 @@ function render(){
   $('#mesnav').classList.toggle('hide', !(aba === 'resumo' || aba === 'lanc' || aba === 'bancos' || aba === 'cfg'));
   $$('.chartbox').forEach(c => c.classList.toggle('semchart', !window.Chart));
   statusSync();
-  ({resumo: renderResumo, lanc: renderLanc, contas: renderContas, bancos: renderBancos, cat: renderCats, cfg: renderCfg})[aba]();
+  renderConsBadge();
+  ({resumo: renderResumo, lanc: renderLanc, contas: renderContas, bancos: renderBancos, cat: renderCats, cfg: renderCfg, consultor: renderConsultor})[aba]();
 }
 
 /* ================== formulário ================== */
@@ -895,14 +962,15 @@ $('#fDelFut').onclick = () => {
 };
 
 /* ================== eventos gerais ================== */
-$('#nav').onclick = e => {
-  const b = e.target.closest('button'); if (!b) return;
-  aba = b.dataset.v;
-  $$('#nav button').forEach(x => x.classList.toggle('on', x === b));
-  $$('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + aba));
-  $('#fab').classList.toggle('hide', aba === 'cfg' || aba === 'cat');
+function irPara(v){
+  aba = v;
+  $$('#nav button').forEach(x => x.classList.toggle('on', x.dataset.v === v));
+  $$('.view').forEach(x => x.classList.toggle('on', x.id === 'v-' + aba));
+  $('#fab').classList.toggle('hide', aba === 'cfg' || aba === 'cat' || aba === 'consultor');
   window.scrollTo(0, 0); render();
-};
+  if (aba === 'consultor') { marcarLidas(); setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 50); }
+}
+$('#nav').onclick = e => { const b = e.target.closest('button'); if (b) irPara(b.dataset.v); };
 $('#mesAnt').onclick = () => { mes = somaMes(mes, -1); render(); };
 $('#mesProx').onclick = () => { mes = somaMes(mes, 1); render(); };
 $('#fab').onclick = () => abrirForm();
@@ -1348,6 +1416,113 @@ document.addEventListener('click', async e => {
 window.addEventListener('online', () => atualizarPalavra(true));
 setInterval(() => { const c = ld(PALAVRA_LS, null); if (!document.hidden && (!c || c.data !== hojeBR())) atualizarPalavra(); }, 60 * 1000);   // virada do dia com o app aberto
 document.addEventListener('visibilitychange', () => { if (!document.hidden) atualizarPalavra(); });
+
+/* ================== consultor financeiro ================== */
+const consMsgs = () => (consultor && consultor.mensagens) || [];
+const naoLidas = () => consMsgs().filter(m => m.papel === 'consultor' && m.lida !== 'sim');
+function nomear(t){
+  const n = (cfg.usuario || '').trim();
+  t = String(t || '');
+  return n ? t.replace(/\{nome\}/g, n) : t.replace(/\{nome\},?\s*/g, '').replace(/^\s*\S/, c => c.toUpperCase());
+}
+function fmtTexto(t){ return esc(nomear(t)).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>'); }
+function quando(s){ s = String(s || ''); return s.length >= 16 ? `${s.slice(8, 10)}/${s.slice(5, 7)} ${s.slice(11, 16)}` : ''; }
+function renderConsBadge(){
+  const ativo = conectado() && consultor;
+  $('#btnCons').classList.toggle('hide', !ativo);
+  $('#consDot').classList.toggle('hide', !naoLidas().length);
+}
+function renderConsCard(){
+  const el = $('#consCard');
+  el.classList.toggle('hide', !conectado() || !consultor);
+  if (!consultor) return;
+  const icone = '<div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg></div>';
+  if (!consultor.ativo) { el.innerHTML = icone + '<div class="ct"><b>Consultor financeiro</b><p class="sub">Falta configurar a chave da IA no Apps Script (GEMINI_API_KEY).</p></div>'; return; }
+  const novas = naoLidas().length, ult = novas ? naoLidas()[0] : consMsgs().filter(m => m.papel === 'consultor').slice(-1)[0];
+  el.innerHTML = icone + `<div class="ct"><b>Seu consultor</b>${novas ? `<span class="nova">${novas > 1 ? novas + ' novas' : 'nova'}</span>` : ''}
+    <p>${ult ? fmtTexto(ult.texto) : 'Pergunte como está o mês, onde dá para economizar ou se vai sobrar dinheiro. Quando ele reparar em algo importante, a observação aparece aqui.'}</p></div>`;
+}
+function renderConsultor(){
+  if (!consultor) { $('#consMsgs').innerHTML = '<div class="vazio">Conecte a planilha em Relatórios → Conexão para usar o consultor.</div>'; return; }
+  $('#consFreq').value = consultor.frequencia || 'normal';
+  $('#consProv').textContent = consultor.provedor === 'claude' ? 'Anthropic Claude' : 'Google Gemini';
+  const ms = consMsgs();
+  let html = ms.length ? '' : '<div class="vazio">Ainda não conversamos. Faça uma pergunta ou toque numa sugestão abaixo.</div>';
+  ms.forEach(m => {
+    const c = m.papel === 'consultor';
+    html += `<div class="bolha ${c ? 'cons' : 'pes'}">${fmtTexto(m.texto)}
+      <div class="meta"><span>${c ? (m.origem === 'proativa' ? 'observação · ' : '') : (m.autor ? esc(m.autor) + ' · ' : '')}${quando(m.criadoEm)}</span>
+      ${c ? `<span class="fb"><button data-fb="bom" data-id="${esc(m.id)}" class="${m.feedback === 'bom' ? 'on' : ''}" aria-label="Útil">👍</button><button data-fb="ruim" data-id="${esc(m.id)}" class="${m.feedback === 'ruim' ? 'on' : ''}" aria-label="Não útil">👎</button></span>` : ''}</div></div>`;
+  });
+  if (consEnviando) html += '<div class="bolha cons digitando">pensando…</div>';
+  if (aba === 'consultor' && naoLidas().length) setTimeout(marcarLidas, 0);   // o que chega com a tela aberta já conta como lido
+  $('#consMsgs').innerHTML = html;
+  $('#consEnviar').disabled = consEnviando || !consultor.ativo;
+  $('#consSug').classList.toggle('hide', ms.length > 2 || !consultor.ativo);
+  const mem = consultor.memoria || [];
+  $('#consMem').innerHTML = mem.length ? mem.map(m => `<div class="memit"><span>${esc(m.fato)}${m.validade ? ` <span class="sub">(até ${dataCurta(m.validade)})</span>` : ''}</span><button data-esq="${esc(m.id)}" aria-label="Esquecer">×</button></div>`).join('')
+    : '<div class="sub">Nada ainda. Conforme vocês conversarem (planos, metas, explicações de gastos), o consultor anota aqui e vocês podem apagar quando quiserem.</div>';
+  if (!consultor.ativo) $('#consMsgs').innerHTML = '<div class="vazio">O consultor ainda não foi configurado: falta a chave da IA no Apps Script.</div>';
+}
+async function consAcao(action, extra){
+  if (!conectado()) throw new Error('Conecte a planilha primeiro');
+  if (!navigator.onLine) throw new Error('Sem internet no momento');
+  const j = await api('POST', {action, ...extra});
+  if (j.consultor) { consultor = j.consultor; sv('fc_consultor', consultor); }
+  return j;
+}
+function marcarLidas(){
+  const ids = naoLidas().map(m => m.id); if (!ids.length) return;
+  ids.forEach(id => { const m = consMsgs().find(x => x.id === id); if (m) m.lida = 'sim'; });
+  sv('fc_consultor', consultor); renderConsBadge();
+  consAcao('consultorLida', {ids}).catch(() => {});
+}
+async function enviarConsultor(texto){
+  texto = String(texto || '').trim(); if (!texto || consEnviando) return;
+  consEnviando = true;
+  consultor.mensagens = consMsgs().concat([{id: 'tmp', papel: 'pessoa', texto, autor: cfg.usuario || '', criadoEm: ''}]);
+  $('#consTxt').value = ''; ajustarTxt(); renderConsultor(); window.scrollTo(0, document.body.scrollHeight);
+  try { await consAcao('chat', {texto, autor: cfg.usuario || ''}); }
+  catch (e) { consultor.mensagens = consMsgs().filter(m => m.id !== 'tmp'); $('#consTxt').value = texto; toast(traduzErro(e.message)); }
+  finally { consEnviando = false; renderConsultor(); window.scrollTo(0, document.body.scrollHeight); }
+}
+function ajustarTxt(){ const t = $('#consTxt'); t.style.height = 'auto'; t.style.height = Math.min(140, t.scrollHeight) + 'px'; }
+$('#consTxt').addEventListener('input', ajustarTxt);
+$('#consTxt').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !/Android|iPhone|iPad/i.test(navigator.userAgent)) { e.preventDefault(); enviarConsultor($('#consTxt').value); } });
+$('#consForm').onsubmit = e => { e.preventDefault(); enviarConsultor($('#consTxt').value); };
+$('#consSug').onclick = e => { const b = e.target.closest('button'); if (b) enviarConsultor(b.textContent); };
+$('#consVoltar').onclick = () => irPara('resumo');
+$('#btnCons').onclick = () => irPara('consultor');
+$('#consCard').onclick = () => irPara('consultor');
+$('#consCard').onkeydown = e => { if (e.key === 'Enter') irPara('consultor'); };
+$('#consFreq').onchange = async e => {
+  try { await consAcao('consultorConfig', {frequencia: e.target.value}); toast('Preferência salva'); }
+  catch (err) { toast(traduzErro(err.message)); renderConsultor(); }
+};
+$('#consAnalisar').onclick = async e => {
+  const b = e.target; if (b.disabled) return; b.disabled = true; b.textContent = 'Analisando…';
+  try {
+    const j = await consAcao('analisarAgora', {});
+    const r = j.resultado || {};
+    toast(r.enviada ? 'O consultor deixou uma observação' : 'Nada novo: ' + (r.motivo || 'sem observações'));
+    renderConsultor(); window.scrollTo(0, document.body.scrollHeight);
+  } catch (err) { toast(traduzErro(err.message)); }
+  finally { b.disabled = false; b.textContent = 'Pedir uma análise agora'; }
+};
+document.addEventListener('click', async e => {
+  const fb = e.target.closest('[data-fb]');
+  if (fb) {
+    const m = consMsgs().find(x => x.id === fb.dataset.id); if (!m) return;
+    m.feedback = fb.dataset.fb; renderConsultor();
+    consAcao('consultorFeedback', {id: m.id, valor: fb.dataset.fb}).catch(() => {});
+    return;
+  }
+  const esq = e.target.closest('[data-esq]');
+  if (esq) {
+    if (!confirm('Fazer o consultor esquecer isso?')) return;
+    try { await consAcao('esquecer', {id: esq.dataset.esq}); renderConsultor(); } catch (err) { toast(traduzErro(err.message)); }
+  }
+});
 
 // conexão
 /* Link de configuração: https://.../#cfg=<código>. O código leva URL + token em base64.
