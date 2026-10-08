@@ -476,6 +476,8 @@ let fila = ld(LS.fila, []);         // lançamentos ainda não enviados à plani
 let catPend = ld(LS.catPend, false);
 let bancos = ld(LS.bancos, []);     // contas bancárias
 let bancosPend = ld(LS.bancosPend, false);
+// contadores de edição local: uma resposta da planilha que saiu ANTES de uma edição nunca sobrescreve a edição
+let catVer = 0, bancosVer = 0;
 let consultor = ld('fc_consultor', null);   // {ativo, provedor, frequencia, mensagens, memoria}
 let consEnviando = false;
 let extConta = '';
@@ -592,8 +594,9 @@ async function sincronizar(completa){
       fila = fila.filter(f => !lote.some(l => l.id === f.id && l.atualizadoEm === f.atualizadoEm));
       sv(LS.fila, fila);
     }
-    if (catPend) { await api('POST', {action:'categorias', itens: cats}); catPend = false; sv(LS.catPend, false); }
-    if (bancosPend) { await api('POST', {action:'contas', itens: bancos}); bancosPend = false; sv(LS.bancosPend, false); }
+    if (catPend) { const v = catVer; await api('POST', {action:'categorias', itens: cats}); if (v === catVer) { catPend = false; sv(LS.catPend, false); } }
+    if (bancosPend) { const v = bancosVer; await api('POST', {action:'contas', itens: bancos}); if (v === bancosVer) { bancosPend = false; sv(LS.bancosPend, false); } }
+    const catV0 = catVer, bancosV0 = bancosVer;   // versão local no momento da leitura
 
     const cheia = completa === true || !ultServidor || Date.now() - ultCompleta > COMPLETA_A_CADA;
     const desde = cheia ? '' : new Date(Date.parse(ultServidor) - 60000).toISOString();   // 1 min de folga
@@ -615,11 +618,16 @@ async function sincronizar(completa){
       });
     }
     const antes = JSON.stringify([cats, bancos]);
-    if (j.categorias.length) { cats = j.categorias.map(c => ({...c, orcamento: Number(c.orcamento) || 0})); }
-    else if (cats.length) { catPend = true; }                       // planilha nova: envia as categorias padrão
-    if (j.contas && j.contas.length) {
-      bancos = j.contas.map(b => ({...b, saldoInicial: Number(b.saldoInicial) || 0, ativa: b.ativa === 'sim' || b.ativa === true}));
-    } else if (bancos.length) { bancosPend = true; }
+    // só aceita a versão da planilha se ninguém editou aqui enquanto a resposta vinha
+    if (!catPend && catV0 === catVer) {
+      if (j.categorias.length) { cats = j.categorias.map(c => ({...c, orcamento: Number(c.orcamento) || 0})); }
+      else if (cats.length) { catPend = true; }                     // planilha nova: envia as categorias padrão
+    }
+    if (!bancosPend && bancosV0 === bancosVer) {
+      if (j.contas && j.contas.length) {
+        bancos = j.contas.map(b => ({...b, saldoInicial: Number(b.saldoInicial) || 0, ativa: b.ativa === 'sim' || b.ativa === true}));
+      } else if (bancos.length) { bancosPend = true; }
+    }
     if (JSON.stringify([cats, bancos]) !== antes) mudou = true;
     if (j.consultor) {
       const c0 = JSON.stringify(consultor);
@@ -1011,7 +1019,7 @@ $('#fCat').onchange = e => { filtro.cat = e.target.value; renderLanc(); };
 $('#fBusca').oninput = e => { filtro.busca = e.target.value; renderLanc(); };
 
 // categorias: edição em linha
-function salvarCats(){ catPend = true; persistir(); statusSync(); sincronizar(); }
+function salvarCats(){ catPend = true; catVer++; persistir(); statusSync(); sincronizar(); }
 ['#catSai', '#catEnt'].forEach(sel => {
   $(sel).addEventListener('change', e => {
     const row = e.target.closest('.catrow'); if (!row) return;
@@ -1056,7 +1064,7 @@ function abrirConta(b){
   $('#cDelBox').classList.toggle('hide', !b);
   dlgC.showModal();
 }
-function salvarBancos(){ bancosPend = true; persistir(); render(); sincronizar(); }
+function salvarBancos(){ bancosPend = true; bancosVer++; persistir(); render(); sincronizar(); }
 $('#cFechar').onclick = () => dlgC.close();
 dlgC.addEventListener('click', e => { if (e.target === dlgC) dlgC.close(); });
 $('#formConta').onsubmit = e => {
